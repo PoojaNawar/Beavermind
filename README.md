@@ -18,10 +18,14 @@ that call type and produces a report, and a PDF of it.
 
 ## What you deliver
 
-1. A deployed URL on Vercel. Not a repo we have to run.
-2. A GitHub repo we can read.
-3. A Supabase database behind it.
-4. One page of written defence. One page means one page.
+Three things, and all three have to be there.
+
+1. **A public GitHub repo.** The source code, readable by us without an invite.
+2. **The deployed link.** Your app on Vercel, live, so we can paste a transcript
+   into it ourselves.
+3. **A Loom, webcam on.** Walk us through what you built and why you built it
+   that way. The decisions, the trade-offs, what fought you. This is the part no
+   tool can write for you.
 
 ## Constraints
 
@@ -47,17 +51,18 @@ the four transcripts exists to catch a system that guesses.
 This is the output, not a suggestion for one. Every item here comes from the
 report the client reads today.
 
-- **A total and a grade.** The score out of 100 and the band it falls in. The
-  rubric defines both.
-- **A verdict.** A few sentences on how the call went, written to the coach.
 - **The one thing.** The single change that moves the number most, and what the
   call would have scored with it.
-- **Retention risk.** Low, medium or high, with the reason. A good-looking score
-  can still hide a client about to leave.
-- **Every dimension, in full.** Score out of its maximum, the band it landed in,
-  why it landed there, the transcript lines that reasoning rests on, and what the
-  coach should do differently next time.
-- **A PDF.** The coach reads it on a phone or prints it.
+- **The brief.** A few sentences on how the call went, written to the coach.
+- **Red flags.** What puts this client at risk of leaving, and why. A
+  good-looking score can still hide one.
+- **A grade and a total.** The score out of 100 and the stage it puts the call
+  in, from at risk up to excellent. The rubric defines both.
+- **Twelve dimensions, each one openable.** Score out of its maximum, the
+  reasoning behind it, the transcript lines that reasoning rests on, and the
+  quick fix: what the coach had to do to reach full marks.
+- **A download PDF button.** It gives the coach the same report as a file. Taste
+  in how it looks earns points.
 
 ## Getting the files
 
@@ -110,30 +115,26 @@ characters.
 
 Those are the decisions we are hiring for. Make them, and be ready to say why.
 
-## Cost and time
+## Time and tools
 
-Use any model you like, cheap ones included. We are not grading how clever the
-model is, we are grading the system you put around it. Keep spend under 20 EUR.
+Three or four hours. That is what this took to scope, so that is what we are
+asking for. Do your best inside it. Knowing what to leave out is part of the job.
 
-Budget eight hours of work across three days. If you spend thirty hours we will
-see it in the repo and it counts against you. Knowing what to leave out is part
-of the job.
+Supabase and Vercel unless you have a reason to do otherwise. Both are free at
+this size and we can open your app and click around in it. Bring your own API
+key or your own subscription for the model.
 
-## How we review it
+Any tool while you build, AI included. Nothing is banned. Use what you would use
+on a Tuesday. We read the decisions, not the keystrokes.
 
-Fifteen minutes, live, screen shared. We run your deployed app on a transcript
-in front of you. Then we ask why: why that table, why that model, why that
-number, why this way and not the other way.
-
-Use whatever tools you want while you build. AI included, nothing is banned. In
-the review there is no AI in the room, only you and the choices you made.
+No voice agent, and no scope you were not asked for. Kick-off and coaching
+calls, scored from a pasted transcript. That is the whole surface.
 
 ## Submit
 
-Reply to the email you got this from with the deployed URL, the repo URL, and
-your one page.
+Reply to the email you got this from with all three.
 
 ---
 
-The people, the company and the calls in this repo are invented. Any resemblance
-to a real coaching business is the point and the coincidence.
+The company, the coaches and the clients in this repo are invented, and so are
+the calls. Nothing here comes from a real recording.
