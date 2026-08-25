@@ -22,6 +22,7 @@ export function getEvaluationModel(): EvaluationModel {
     if (!apiKey || apiKey === "YOUR_MODEL_API_KEY") {
       throw new Error("OpenAI API key is not set.");
     }
+    const openai = createOpenAI({ apiKey });
     return {
       provider: "openai",
       modelName,
