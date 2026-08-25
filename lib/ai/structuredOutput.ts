@@ -32,6 +32,19 @@ export function structuredMaxTokens(args: {
   return 3800;
 }
 
+/** Wall-clock abort so a fast model cannot hang a Vercel invocation. */
+export function modelCallTimeoutMs(args: {
+  provider: AiProviderId;
+  modelName: string;
+  kind: "extract" | "synthesis" | "single";
+}): number {
+  if (isOpenAiReasoningModel(args.provider, args.modelName)) {
+    return args.kind === "extract" ? 120_000 : 240_000;
+  }
+  if (args.kind === "extract") return 45_000;
+  return 60_000;
+}
+
 /** Recover JSON when the model wraps it in fences or leading prose. */
 export function repairJsonText(text: string): string | null {
   const trimmed = text.trim();

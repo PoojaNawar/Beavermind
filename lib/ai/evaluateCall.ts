@@ -26,6 +26,8 @@ import {
 } from "@/lib/ai/providerRetry";
 import { getEvaluationModel } from "@/lib/ai/provider";
 import {
+  isOpenAiReasoningModel,
+  modelCallTimeoutMs,
   repairJsonText,
   structuredMaxTokens,
   structuredObjectMode,
@@ -153,7 +155,13 @@ async function runStructuredEvaluation(args: {
         kind: "single",
       }),
       maxRetries: 0,
-      abortSignal: AbortSignal.timeout(240_000),
+      abortSignal: AbortSignal.timeout(
+        modelCallTimeoutMs({
+          provider,
+          modelName,
+          kind: args.mode === "synthesis" ? "synthesis" : "single",
+        }),
+      ),
       experimental_repairText: async ({ text }) => repairJsonText(text),
     }),
   );
@@ -191,7 +199,9 @@ async function runSynthesisFirstBatch(args: {
         kind: "synthesis",
       }),
       maxRetries: 0,
-      abortSignal: AbortSignal.timeout(240_000),
+      abortSignal: AbortSignal.timeout(
+        modelCallTimeoutMs({ provider, modelName, kind: "synthesis" }),
+      ),
       experimental_repairText: async ({ text }) => repairJsonText(text),
     }),
   );
@@ -229,7 +239,9 @@ async function runSynthesisSecondBatch(args: {
         kind: "synthesis",
       }),
       maxRetries: 0,
-      abortSignal: AbortSignal.timeout(240_000),
+      abortSignal: AbortSignal.timeout(
+        modelCallTimeoutMs({ provider, modelName, kind: "synthesis" }),
+      ),
       experimental_repairText: async ({ text }) => repairJsonText(text),
     }),
   );
@@ -269,7 +281,9 @@ async function extractOneChunk(args: {
           kind: "extract",
         }),
         maxRetries: 0,
-        abortSignal: AbortSignal.timeout(120_000),
+        abortSignal: AbortSignal.timeout(
+          modelCallTimeoutMs({ provider, modelName, kind: "extract" }),
+        ),
         experimental_repairText: async ({ text }) => repairJsonText(text),
       }),
   );
@@ -450,6 +464,18 @@ export async function evaluateCall(args: {
     await emit(ctx, "aggregating_evidence");
     if (provider !== "openai") await pauseBetweenProviderCalls();
     await emit(ctx, "evaluating");
+
+    if (!isOpenAiReasoningModel(provider, modelName)) {
+      const synth = await runStructuredEvaluation({
+        callType: args.callType,
+        transcript: "",
+        mode: "synthesis",
+        evidencePack,
+        ctx,
+      });
+      return finish(synth.output, synth.modelName, chunks.length);
+    }
+
     const first = await runSynthesisFirstBatch({
       callType: args.callType,
       evidencePack,

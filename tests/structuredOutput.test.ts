@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   isOpenAiReasoningModel,
+  modelCallTimeoutMs,
   repairJsonText,
   structuredMaxTokens,
   structuredObjectMode,
@@ -24,11 +25,25 @@ describe("OpenAI structured output helpers", () => {
     ).toBeUndefined();
     expect(
       structuredMaxTokens({
-        provider: "groq",
-        modelName: "openai/gpt-oss-120b",
+        provider: "openai",
+        modelName: "gpt-4o-mini",
         kind: "extract",
       }),
     ).toBe(2048);
+    expect(
+      modelCallTimeoutMs({
+        provider: "openai",
+        modelName: "gpt-4o-mini",
+        kind: "extract",
+      }),
+    ).toBe(45_000);
+    expect(
+      modelCallTimeoutMs({
+        provider: "openai",
+        modelName: "gpt-5-mini",
+        kind: "extract",
+      }),
+    ).toBe(120_000);
   });
 
   it("uses json object mode for OpenAI and leaves Groq on auto/tool", () => {
