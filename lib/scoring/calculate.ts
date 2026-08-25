@@ -1,0 +1,232 @@
+import type {
+  DimensionResult,
+  EvaluationResult,
+  FiredCap,
+  GradeBand,
+  OneThing,
+  Rubric,
+} from "@/lib/rubrics/types";
+import type { ModelEvaluationOutput } from "@/lib/validation/schemas";
+import {
+  normalizeStoredEvidence,
+  summarizeDimensionEvidence,
+  summarizeReportEvidence,
+} from "@/lib/transcripts/evidenceQuality";
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, n));
+}
+
+function snapToDiscrete(score: number, allowed: number[]): number {
+  let best = allowed[0]!;
+  let bestDist = Math.abs(score - best);
+  for (const a of allowed) {
+    const d = Math.abs(score - a);
+    if (d < bestDist) {
+      best = a;
+      bestDist = d;
+    }
+  }
+  return best;
+}
+
+export function gradeFromScore(score: number, rubric: Rubric): GradeBand {
+  const sorted = [...rubric.gradeBands].sort((a, b) => b.min - a.min);
+  for (const band of sorted) {
+    if (score >= band.min && score <= band.max) {
+      return band.band;
+    }
+  }
+  return "Fail";
+}
+
+/** Map a raw score onto the 100-point grade scale. */
+export function normalizeToHundred(
+  rawScore: number,
+  scoreOutOf: number,
+): number {
+  if (scoreOutOf === 100) return Math.round(rawScore);
+  return Math.round((rawScore / scoreOutOf) * 100);
+}
+
+/**
+ * Backend-owned totals, caps, and grade.
+ * Evidence strength/counts are attached after scores are fixed — they must
+ * not feed back into dimension or overall scoring.
+ */
+export function applyCapsAndBuildResult(args: {
+  model: ModelEvaluationOutput;
+  rubric: Rubric;
+  modelName: string;
+}): EvaluationResult {
+  const { model, rubric, modelName } = args;
+  const firedCaps: FiredCap[] = [];
+  const dimById = new Map(rubric.dimensions.map((d) => [d.id, d]));
+
+  // Start from model dimension scores
+  const working = model.dimensions.map((d) => {
+    const def = dimById.get(d.id)!;
+    let score = d.score;
+
+    if (!d.disabled && !d.notApplicable && score !== null) {
+      score = clamp(score, 0, def.maxScore);
+      if (def.discreteScores?.length) {
+        if (rubric.id === "coaching" || def.discreteScores.includes(score)) {
+          score = snapToDiscrete(score, def.discreteScores);
+        } else if (rubric.id === "kickoff" && def.discreteScores.length) {
+          // Kickoff dims with preferred buckets — snap if close
+          score = snapToDiscrete(score, def.discreteScores);
+        }
+      }
+      // Kickoff half-steps: round to 0.5
+      if (rubric.id === "kickoff" && def.maxScore <= 5) {
+        score = Math.round(score * 2) / 2;
+        score = clamp(score, 0, def.maxScore);
+      } else if (rubric.id === "kickoff") {
+        score = Math.round(score);
+      }
+    }
+
+    return { ...d, score };
+  });
+
+  // Apply dimension-level caps / forced scores from model-reported + rule IDs
+  const firedIds = new Set(model.firedCapIds);
+  for (const cap of rubric.autoCaps) {
+    if (!firedIds.has(cap.id)) continue;
+
+    if (cap.dimensionId && cap.forceDimensionScore !== undefined) {
+      const dim = working.find((d) => d.id === cap.dimensionId);
+      if (dim && !dim.disabled && !dim.notApplicable) {
+        dim.score = cap.forceDimensionScore;
+        firedCaps.push({
+          id: cap.id,
+          condition: cap.condition,
+          effect: `${cap.dimensionId} forced to ${cap.forceDimensionScore}`,
+        });
+      }
+    } else if (cap.dimensionId && cap.maxDimensionScore !== undefined) {
+      const dim = working.find((d) => d.id === cap.dimensionId);
+      if (dim && dim.score !== null && dim.score > cap.maxDimensionScore) {
+        dim.score = cap.maxDimensionScore;
+        firedCaps.push({
+          id: cap.id,
+          condition: cap.condition,
+          effect: `${cap.dimensionId} capped at ${cap.maxDimensionScore}`,
+        });
+      }
+    } else if (cap.maxTotal !== undefined) {
+      firedCaps.push({
+        id: cap.id,
+        condition: cap.condition,
+        effect: `Total capped at ${cap.maxTotal}`,
+      });
+    }
+  }
+
+  // Kickoff special: no structured recap → D11 max 3 (if model didn't already)
+  if (rubric.id === "kickoff") {
+    const d11 = working.find((d) => d.id === "d11");
+    if (
+      d11 &&
+      d11.score !== null &&
+      d11.score > 3 &&
+      /no structured recap|missing structured recap/i.test(d11.rationale)
+    ) {
+      d11.score = 3;
+    }
+  }
+
+  let raw = 0;
+  let available = 0;
+  for (const d of working) {
+    const def = dimById.get(d.id)!;
+    if (d.disabled || d.notApplicable) continue;
+    available += def.maxScore;
+    if (d.score !== null) raw += d.score;
+  }
+
+  // Coaching source text says 100 / 85, but the dimension table sums to 105 / 90.
+  // We use the sum of active dimension maxima as the true denominator, then
+  // normalize onto the 100-point grade scale.
+  const effectiveOutOf = available || 100;
+
+  // Apply total caps (caps are written against a 100-point call).
+  let cappedRaw = raw;
+  for (const cap of rubric.autoCaps) {
+    if (!firedIds.has(cap.id)) continue;
+    if (cap.maxTotal !== undefined) {
+      const scaledCap = Math.round((cap.maxTotal / 100) * effectiveOutOf);
+      if (cappedRaw > scaledCap) {
+        cappedRaw = scaledCap;
+      }
+    }
+  }
+
+  const overallScore = normalizeToHundred(cappedRaw, effectiveOutOf);
+  const grade = gradeFromScore(overallScore, rubric);
+
+  const dimensions: DimensionResult[] = working.map((d) => {
+    const def = dimById.get(d.id)!;
+    const evidence = d.evidence.map(normalizeStoredEvidence);
+    const quality = summarizeDimensionEvidence(evidence, d.notDemonstrated);
+    return {
+      id: d.id,
+      name: def.name,
+      score: d.score,
+      maxScore: def.maxScore,
+      disabled: d.disabled,
+      disabledReason: d.disabledReason,
+      notApplicable: d.notApplicable,
+      notApplicableReason: d.notApplicableReason,
+      band: d.band,
+      rationale: d.rationale,
+      evidence,
+      quickFix: d.quickFix,
+      ...quality,
+    };
+  });
+
+  let scoreIfApplied: number | null = null;
+  const basis = model.oneThing.scoreIfAppliedBasis;
+  if (
+    model.oneThing.estimatedPointsGained !== null &&
+    model.oneThing.estimatedPointsGained >= 0
+  ) {
+    const gained = model.oneThing.estimatedPointsGained;
+    const projectedRaw = Math.min(effectiveOutOf, cappedRaw + gained);
+    scoreIfApplied = normalizeToHundred(projectedRaw, effectiveOutOf);
+  }
+
+  const oneThing: OneThing = {
+    recommendation: model.oneThing.recommendation,
+    impact: model.oneThing.impact,
+    scoreIfApplied,
+    scoreIfAppliedBasis: basis,
+  };
+
+  return {
+    callType: rubric.id,
+    rubricVersion: rubric.version,
+    overallScore,
+    scoreOutOf: effectiveOutOf,
+    grade,
+    oneThing,
+    brief: model.brief,
+    redFlags: model.redFlags,
+    dimensions,
+    firedCaps,
+    modelName,
+    evidenceQuality: summarizeReportEvidence(dimensions),
+  };
+}
+
+/** Pure helpers for tests */
+export function sumDimensionScores(
+  scores: { score: number | null; disabled?: boolean; notApplicable?: boolean }[],
+): number {
+  return scores.reduce((acc, s) => {
+    if (s.disabled || s.notApplicable || s.score === null) return acc;
+    return acc + s.score;
+  }, 0);
+}

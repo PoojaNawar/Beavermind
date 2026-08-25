@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "app/api/evaluations/**/*.ts": {
+      "maxDuration": 300
+    }
+  }
+}
