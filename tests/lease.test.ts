@@ -82,4 +82,16 @@ describe("processing lease", () => {
     expect(retry.accept).toBe(false);
     expect(retry.httpStatus).toBe(409);
   });
+
+  it("uses a shorter reclaim window when an explicit hosting lease is passed", () => {
+    const updatedAt = new Date(now - 120_000).toISOString();
+    expect(
+      canClaimEvaluation({
+        status: "processing",
+        updatedAt,
+        now,
+        leaseMs: 90_000,
+      }).claimable,
+    ).toBe(true);
+  });
 });

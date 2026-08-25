@@ -44,8 +44,8 @@ export function ProcessingProgress({
     <div className="rounded-2xl border border-[var(--line)] bg-[var(--card)] p-8">
       <h2 className="font-display text-2xl font-semibold">Processing</h2>
       <p className="mt-2 text-sm text-[var(--muted)]">
-        You can close this tab — the evaluation keeps running. This page
-        updates from the saved pipeline stage.
+        You can leave this page open — long coaching calls often take a few
+        minutes while evidence is extracted from the transcript.
       </p>
       <ol className="mt-6 space-y-2">
         {PROCESSING_STEP_ORDER.map((step, i) => {

@@ -12,8 +12,8 @@ export const maxDuration = 300;
 
 /**
  * Run or resume evaluation in this invocation.
- * Vercel cannot finish a 6-chunk coaching call in one function; each call
- * does one model step, then the report page (and after()) starts the next.
+ * Vercel runs one phase per call: all extract chunks in parallel, then
+ * each synthesis half. The report page starts the next phase.
  */
 export async function POST(
   request: Request,

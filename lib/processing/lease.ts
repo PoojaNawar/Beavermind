@@ -18,8 +18,22 @@ import { env } from "@/lib/env";
 /** No heartbeat within this window ⇒ treat processing as dead. */
 export const PROCESSING_LEASE_MS = 5 * 60 * 1000;
 
+/** Vercel functions die in ~60–300s; a 5 min lease leaves a killed worker blocking retry. */
+export const VERCEL_PROCESSING_LEASE_MS = 90_000;
+
 /** How often an active worker refreshes the lease. */
 export const HEARTBEAT_INTERVAL_MS = 45_000;
+export const VERCEL_HEARTBEAT_INTERVAL_MS = 20_000;
+
+export function currentLeaseMs(): number {
+  return process.env.VERCEL ? VERCEL_PROCESSING_LEASE_MS : PROCESSING_LEASE_MS;
+}
+
+export function currentHeartbeatMs(): number {
+  return process.env.VERCEL
+    ? VERCEL_HEARTBEAT_INTERVAL_MS
+    : HEARTBEAT_INTERVAL_MS;
+}
 
 export function isLeaseExpired(
   lastTouchIso: string | null | undefined,
@@ -42,7 +56,7 @@ export function canClaimEvaluation(args: {
   now?: number;
   leaseMs?: number;
 }): { claimable: boolean; reason: string } {
-  const { status, updatedAt, now, leaseMs } = args;
+  const { status, updatedAt, now, leaseMs = currentLeaseMs() } = args;
 
   if (status === "completed") {
     return { claimable: false, reason: "completed" };

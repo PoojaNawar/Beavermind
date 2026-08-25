@@ -23,17 +23,15 @@ export const env = {
     first("SUPABASE_SECRET", "SUPABASE_SERVICE_ROLE_KEY"),
   appUrl: () => first("APP_URL", "NEXT_PUBLIC_APP_URL"),
   /**
-   * Max model calls per process invocation. Vercel is 1 so long chunked
-   * transcripts resume across requests instead of hitting the function limit.
+   * Hosting step mode. Vercel runs one pipeline phase per invocation
+   * (all extract chunks in parallel, then each synthesis half).
    */
-  stepModelCalls: () => {
+  pipelineStepMode: (): "full" | "phase" => {
     const raw = first("PIPELINE_STEP_MODEL_CALLS");
-    if (raw) {
-      const n = Number(raw);
-      if (Number.isFinite(n) && n > 0) return n;
-    }
-    if (process.env.VERCEL) return 1;
-    return Number.POSITIVE_INFINITY;
+    if (raw === "all") return "full";
+    if (raw === "phase") return "phase";
+    if (process.env.VERCEL) return "phase";
+    return "full";
   },
   maxChars: () =>
     Number(

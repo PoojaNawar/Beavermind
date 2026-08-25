@@ -21,13 +21,14 @@ import {
 import { PIPELINE_VERSION } from "@/lib/pipeline/version";
 import {
   canClaimEvaluation,
+  currentHeartbeatMs,
   startProcessingHeartbeat,
 } from "@/lib/processing/lease";
 import { needsChunking } from "@/lib/transcripts/handling";
 
 /**
- * Process an evaluation. On Vercel this is one model call then a checkpoint
- * so long chunked transcripts can finish across invocations.
+ * Process an evaluation. On Vercel each invocation runs one phase
+ * (parallel extract, then each synthesis half) and checkpoints.
  *
  * Same evaluation ID is reused on retry — never a second row.
  */
@@ -53,8 +54,9 @@ export async function processEvaluation(
     return "idle";
   }
 
-  const stopHeartbeat = startProcessingHeartbeat(() =>
-    touchProcessingLease(id),
+  const stopHeartbeat = startProcessingHeartbeat(
+    () => touchProcessingLease(id),
+    currentHeartbeatMs(),
   );
 
   let stage: EvaluationStage =

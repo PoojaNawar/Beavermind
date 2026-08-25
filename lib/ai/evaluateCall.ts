@@ -316,15 +316,15 @@ function unfinished(args: {
  * Main evaluation entry point (Option C′).
  * Provider/model from getEvaluationModel; map-reduce when needsChunking.
  *
- * On Vercel, one model call per invocation; packs are checkpointed so a
- * long coaching transcript can finish without changing scoring semantics.
+ * On Vercel, one pipeline phase per invocation: all extract chunks in
+ * parallel, then each synthesis half. Scoring/rubric semantics unchanged.
  */
 export async function evaluateCall(args: {
   callType: CallType;
   transcript: string;
   onStage?: StageListener;
   checkpoint?: PipelineCheckpoint | null;
-  maxModelCallsThisInvocation?: number;
+  stepMode?: "full" | "phase";
 }): Promise<EvaluateCallOutcome> {
   const transcript = args.transcript.trim();
   const saved = args.checkpoint;
@@ -334,8 +334,8 @@ export async function evaluateCall(args: {
   };
   const { provider, modelName } = getEvaluationModel();
   const chunked = needsChunking(transcript, args.callType);
-  const maxCalls =
-    args.maxModelCallsThisInvocation ?? env.stepModelCalls();
+  const stopAfterPhase =
+    (args.stepMode ?? env.pipelineStepMode()) === "phase";
 
   const finish = async (
     modelOutput: ModelEvaluationOutput,
@@ -383,9 +383,6 @@ export async function evaluateCall(args: {
   let packs: ChunkEvidencePack[] = saved?.packs ? [...saved.packs] : [];
   let nextChunkIndex = saved?.nextChunkIndex ?? 0;
   let firstDimensions = saved?.firstDimensions;
-  let callsThisInvocation = 0;
-
-  const budgetLeft = () => callsThisInvocation < maxCalls;
 
   const snapshot = (
     nextPhase: PipelineCheckpoint["phase"],
@@ -403,32 +400,41 @@ export async function evaluateCall(args: {
 
   if (phase === "extract") {
     await emit(ctx, "extracting_evidence");
-    while (nextChunkIndex < chunks.length) {
-      if (!budgetLeft()) {
-        return unfinished({
-          checkpoint: snapshot("extract"),
-          provider,
-          modelName,
-        });
+    const remaining = chunks.slice(nextChunkIndex);
+    if (remaining.length > 0) {
+      if (provider === "openai") {
+        const extracted = await Promise.all(
+          remaining.map((chunk) =>
+            extractOneChunk({
+              callType: args.callType,
+              chunkText: chunk.text,
+              chunkIndex: chunk.index,
+              chunkCount: chunks.length,
+              ctx,
+            }),
+          ),
+        );
+        extracted.sort((a, b) => a.chunkIndex - b.chunkIndex);
+        packs.push(...extracted);
+      } else {
+        for (let i = 0; i < remaining.length; i++) {
+          if (i > 0) await pauseBetweenProviderCalls();
+          const chunk = remaining[i]!;
+          packs.push(
+            await extractOneChunk({
+              callType: args.callType,
+              chunkText: chunk.text,
+              chunkIndex: chunk.index,
+              chunkCount: chunks.length,
+              ctx,
+            }),
+          );
+        }
       }
-      const chunk = chunks[nextChunkIndex]!;
-      if (nextChunkIndex > 0 && provider !== "openai") {
-        await pauseBetweenProviderCalls();
-      }
-      packs.push(
-        await extractOneChunk({
-          callType: args.callType,
-          chunkText: chunk.text,
-          chunkIndex: chunk.index,
-          chunkCount: chunks.length,
-          ctx,
-        }),
-      );
-      nextChunkIndex += 1;
-      callsThisInvocation += 1;
+      nextChunkIndex = chunks.length;
     }
     phase = "synthesis_first";
-    if (!budgetLeft()) {
+    if (stopAfterPhase) {
       return unfinished({
         checkpoint: snapshot("synthesis_first"),
         provider,
@@ -442,13 +448,6 @@ export async function evaluateCall(args: {
 
   if (phase === "synthesis_first") {
     await emit(ctx, "aggregating_evidence");
-    if (!budgetLeft()) {
-      return unfinished({
-        checkpoint: snapshot("synthesis_first"),
-        provider,
-        modelName,
-      });
-    }
     if (provider !== "openai") await pauseBetweenProviderCalls();
     await emit(ctx, "evaluating");
     const first = await runSynthesisFirstBatch({
@@ -457,9 +456,8 @@ export async function evaluateCall(args: {
       ctx,
     });
     firstDimensions = first.dimensions;
-    callsThisInvocation += 1;
     phase = "synthesis_second";
-    if (!budgetLeft()) {
+    if (stopAfterPhase) {
       return unfinished({
         checkpoint: snapshot("synthesis_second", {
           firstDimensions,
