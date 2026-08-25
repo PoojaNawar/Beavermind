@@ -54,6 +54,14 @@ export function EvaluationPoller({ id }: { id: string }) {
   }, [id]);
 
   useEffect(() => {
+    void fetch(`/api/evaluations/${id}/process`, { method: "POST" }).catch(
+      () => {
+        /* GET polling still reflects status if process cannot start */
+      },
+    );
+  }, [id]);
+
+  useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -78,7 +86,7 @@ export function EvaluationPoller({ id }: { id: string }) {
   async function onRetry() {
     setRetrying(true);
     try {
-      const res = await fetch(`/api/evaluations/${id}/retry`, {
+      const res = await fetch(`/api/evaluations/${id}/process`, {
         method: "POST",
       });
       const json = await res.json();

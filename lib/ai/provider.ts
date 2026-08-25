@@ -20,7 +20,7 @@ export function getEvaluationModel(): EvaluationModel {
   if (provider === "openai") {
     const apiKey = env.openaiKey();
     if (!apiKey || apiKey === "YOUR_MODEL_API_KEY") {
-      throw new Error("OPENAI_API_KEY is not set. Add it to .env.local.");
+      throw new Error("OpenAI API key is not set.");
     }
     const openai = createOpenAI({ apiKey });
     const reasoning =
@@ -38,7 +38,7 @@ export function getEvaluationModel(): EvaluationModel {
   if (provider === "groq") {
     const apiKey = env.groqKey();
     if (!apiKey || apiKey === "YOUR_MODEL_API_KEY") {
-      throw new Error("GROQ_KEY is not set. Add it to .env.local.");
+      throw new Error("Groq API key is not set.");
     }
     const groq = createOpenAI({
       apiKey,

@@ -21,6 +21,9 @@ describe("safe evaluation errors", () => {
     expect(publicErrorMessage(new Error("429 rate limit"))).toMatch(
       /busy|retry/i,
     );
+    expect(publicErrorMessage(new Error("OpenAI API key is not set."))).toMatch(
+      /unavailable/i,
+    );
     expect(publicErrorMessage(new Error("ETIMEDOUT"))).toMatch(/unavailable/i);
   });
 

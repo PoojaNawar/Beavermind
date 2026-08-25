@@ -187,7 +187,7 @@ async function runSplitSynthesisEvaluation(args: {
     }),
   );
 
-  await pauseBetweenProviderCalls();
+  if (provider !== "openai") await pauseBetweenProviderCalls();
 
   const second = await callModel(args.ctx, `synthesis:${args.callType}:dims7-12`, () =>
     generateObject({
@@ -239,7 +239,7 @@ async function extractEvidencePacks(
 
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i]!;
-    if (i > 0) await pauseBetweenProviderCalls();
+    if (i > 0 && provider !== "openai") await pauseBetweenProviderCalls();
 
     const { object } = await callModel(
       ctx,
@@ -303,7 +303,7 @@ export async function evaluateCall(args: {
     const aggregated = aggregateEvidencePacks(extracted.packs, 2);
     const evidencePack = formatAggregatedEvidence(aggregated);
 
-    await pauseBetweenProviderCalls();
+    if (provider !== "openai") await pauseBetweenProviderCalls();
     await emit(ctx, "evaluating");
     const synth = await runSplitSynthesisEvaluation({
       callType: args.callType,

@@ -11,12 +11,12 @@ export default function HomePage() {
           Call Quality Evaluation
         </h1>
         <p className="max-w-md text-lg leading-relaxed text-[var(--muted)]">
-          Score kick-off and coaching calls with a rubric and quotes from the
-          transcript.
+          Score kick-off and coaching calls against a rubric, using quotes from
+          the transcript.
         </p>
         <p className="max-w-md text-sm leading-relaxed text-[var(--muted)]">
-          Paste a transcript or upload a transcript file. BeaverMind scores the
-          conversation against the selected rubric.
+          Choose Kick-off or Coaching, then paste the call or upload a .txt /
+          .md file.
         </p>
       </section>
 

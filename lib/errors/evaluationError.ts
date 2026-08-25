@@ -32,7 +32,7 @@ export function sanitizeDiagnostic(err: unknown): string {
 export function classifyEvaluationError(err: unknown): EvaluationErrorCode {
   const msg = rawMessage(err);
 
-  if (/not configured|OPENAI_API_KEY|GROQ_KEY|misconfigured/i.test(msg)) {
+  if (/not configured|not set|misconfigured/i.test(msg)) {
     return "provider_unavailable";
   }
   if (/rate limit|429|TPM|tokens per minute/i.test(msg)) {
@@ -57,10 +57,6 @@ export function classifyEvaluationError(err: unknown): EvaluationErrorCode {
 }
 
 export function publicErrorMessage(err: unknown): string {
-  if (containsSecret(rawMessage(err))) {
-    return "Evaluation could not be completed. Please retry.";
-  }
-
   switch (classifyEvaluationError(err)) {
     case "rate_limited":
       return "Evaluation could not be completed because the AI service was busy. Please retry in a moment.";
@@ -74,6 +70,12 @@ export function publicErrorMessage(err: unknown): string {
     case "validation_failed":
     case "unknown":
     default:
-      return "Evaluation could not be completed. Please retry.";
+      break;
   }
+
+  if (containsSecret(rawMessage(err))) {
+    return "Evaluation could not be completed. Please retry.";
+  }
+
+  return "Evaluation could not be completed. Please retry.";
 }
