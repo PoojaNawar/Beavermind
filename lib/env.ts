@@ -17,7 +17,13 @@ export const env = {
   /** @deprecated Prefer openaiKey — kept for older env files during migration */
   groqKey: () => first("GROQ_KEY", "MODEL_API_KEY"),
   aiProvider: () => (first("AI_PROVIDER") ?? "openai").toLowerCase(),
-  aiModel: () => first("AI_MODEL") ?? "gpt-4o-mini",
+  aiModel: () => {
+    const requested = first("AI_MODEL") ?? "gpt-4o-mini";
+    if (isOpenAiReasoningModel("openai", requested)) {
+      return "gpt-4o-mini";
+    }
+    return requested;
+  },
   supabaseUrl: () => first("SUPABASE_URL"),
   supabaseAnon: () => first("SUPABASE_ANON", "SUPABASE_ANON_KEY"),
   supabaseSecret: () =>

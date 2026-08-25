@@ -4,6 +4,7 @@ import {
   publicErrorMessage,
   sanitizeDiagnostic,
 } from "@/lib/errors/evaluationError";
+import { env } from "@/lib/env";
 
 describe("safe evaluation errors", () => {
   it("does not expose API keys in public or diagnostic text", () => {
@@ -43,5 +44,15 @@ describe("safe evaluation errors", () => {
     expect(
       publicErrorMessage(new Error("Unknown dimension id from model: d99")),
     ).toBe("Evaluation could not be completed. Please retry.");
+  });
+});
+
+describe("evaluation model routing", () => {
+  it("does not use OpenAI reasoning models for live scoring", () => {
+    const original = process.env.AI_MODEL;
+    process.env.AI_MODEL = "gpt-5-mini";
+    expect(env.aiModel()).toBe("gpt-4o-mini");
+    if (original === undefined) delete process.env.AI_MODEL;
+    else process.env.AI_MODEL = original;
   });
 });

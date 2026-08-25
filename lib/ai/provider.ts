@@ -22,15 +22,11 @@ export function getEvaluationModel(): EvaluationModel {
     if (!apiKey || apiKey === "YOUR_MODEL_API_KEY") {
       throw new Error("OpenAI API key is not set.");
     }
-    const openai = createOpenAI({ apiKey });
-    const reasoning =
-      modelName.startsWith("gpt-5") || /^o[1-4]/.test(modelName);
     return {
       provider: "openai",
       modelName,
       model: openai(modelName, {
         structuredOutputs: true,
-        ...(reasoning ? { reasoningEffort: "low" as const } : {}),
       }),
     };
   }

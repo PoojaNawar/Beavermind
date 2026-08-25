@@ -84,6 +84,7 @@ interface RunContext {
   onStage?: StageListener;
   onProgress?: ProgressListener;
   modelCallCount: number;
+  provider: "openai" | "groq";
 }
 
 async function callModel<T>(
@@ -92,7 +93,13 @@ async function callModel<T>(
   fn: () => Promise<T>,
 ): Promise<T> {
   ctx.modelCallCount += 1;
-  return withProviderRetry(label, fn);
+  return withProviderRetry(
+    label,
+    fn,
+    ctx.provider === "openai"
+      ? { maxAttempts: 2, baseDelayMs: 1000 }
+      : undefined,
+  );
 }
 
 async function emit(ctx: RunContext, stage: EvaluationStage): Promise<void> {
@@ -350,6 +357,7 @@ export async function evaluateCall(args: {
   const transcript = args.transcript.trim();
   const saved = args.checkpoint;
   let lastProgress = saved?.progress;
+  const { provider, modelName } = getEvaluationModel();
   const ctx: RunContext = {
     onStage: args.onStage,
     onProgress: async (message) => {
@@ -357,8 +365,8 @@ export async function evaluateCall(args: {
       await args.onProgress?.(message);
     },
     modelCallCount: saved?.modelCallCount ?? 0,
+    provider,
   };
-  const { provider, modelName } = getEvaluationModel();
   const chunked = needsChunking(transcript, args.callType);
   const stopAfterPhase =
     (args.stepMode ?? env.pipelineStepMode()) === "phase";
