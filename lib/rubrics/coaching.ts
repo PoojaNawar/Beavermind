@@ -67,6 +67,8 @@ export const coachingRubric: Rubric = {
       maxScore: 10,
       description: "Genuine curiosity; gauge real state; set call intention.",
       scoringCriteria: "Elite 10 | Strong 7 | Surface 3 | Fail 0.",
+      quickFixAction:
+        "Check body, wins, and struggles, reflect them, then set a tailored intention for this call.",
       discreteScores: [0, 3, 7, 10],
       bands: [
         { name: "Elite", min: 10, max: 10, criteria: "Body + wins + struggles; reflects; tailored intention." },
@@ -84,6 +86,8 @@ export const coachingRubric: Rubric = {
         "When applicable (weeks 8/16/24), specific personalized feedback on 1–2 movements tied to goals.",
       scoringCriteria:
         "Elite 10 | Strong 7 | Surface 3 | Fail 0. If N/A this cycle, mark notApplicable — do not penalize.",
+      quickFixAction:
+        "Give anatomically precise feedback on 1–2 movements and tie each to their goals.",
       discreteScores: [0, 3, 7, 10],
       bands: [
         { name: "Elite", min: 10, max: 10, criteria: "1–2 movements; anatomically precise; tied to goals." },
@@ -98,6 +102,8 @@ export const coachingRubric: Rubric = {
       maxScore: 15,
       description: "Connect current block to 12-month vision and identity.",
       scoringCriteria: "Elite 15 | Strong 10 | Mid 5 | Fail 0. No vision connection → max 10.",
+      quickFixAction:
+        "Name this block, name the 12-month vision, and connect both to who they are becoming.",
       discreteScores: [0, 5, 10, 15],
       bands: [
         { name: "Elite", min: 15, max: 15, criteria: "Block explained + 12-month vision by name + belief." },
@@ -114,6 +120,8 @@ export const coachingRubric: Rubric = {
       description:
         "Live movement coaching with reflective questions and goal link. Disable if no movement coaching occurred.",
       scoringCriteria: "Elite 15 | Strong 10 | Mid 5 | Fail 0. Optional — disable when N/A.",
+      quickFixAction:
+        "Coach the movement live, ask a reflective question, and link the improvement to the goal.",
       discreteScores: [0, 5, 10, 15],
       bands: [
         { name: "Elite", min: 15, max: 15, criteria: "Live coaching + reflective Qs + improvement + goal link." },
@@ -129,6 +137,8 @@ export const coachingRubric: Rubric = {
       description: "Adjustments framed as intelligent strategy protecting the long game.",
       scoringCriteria:
         "Elite 10 | Strong 7 | Surface 3 | Fail 0. If no adjustments needed → default 7.",
+      quickFixAction:
+        "Explain the adjustment as strategy that protects the long game, not a demotion.",
       discreteScores: [0, 3, 7, 10],
       bands: [
         { name: "Elite", min: 10, max: 10, criteria: "Clear rationale + protective framing." },
@@ -143,6 +153,8 @@ export const coachingRubric: Rubric = {
       maxScore: 15,
       description: "Both sides leave with specific, time-bound, owned commitments.",
       scoringCriteria: "Elite 15 | Strong 10 | Mid 5 | Fail 0.",
+      quickFixAction:
+        "Leave with coach and client commitments that have owners and deadlines.",
       discreteScores: [0, 5, 10, 15],
       bands: [
         { name: "Elite", min: 15, max: 15, criteria: "Coach + client specific commitments with deadlines + ownership." },
@@ -157,6 +169,8 @@ export const coachingRubric: Rubric = {
       maxScore: 5,
       description: "Single-point (or progression-gated) client-owned deliverable with consequence.",
       scoringCriteria: "Elite 5 | Mid 3 | Fail 0.",
+      quickFixAction:
+        "Name one client-owned deliverable, get a confirm, and state what happens if it is missed.",
       discreteScores: [0, 3, 5],
       bands: [
         { name: "Elite", min: 5, max: 5, criteria: "Named/gated deliverable client confirms; consequence clear." },
@@ -170,6 +184,8 @@ export const coachingRubric: Rubric = {
       maxScore: 5,
       description: "Coach through difficulty; don't ignore. If no struggle → default 5.",
       scoringCriteria: "Elite 5 | Mid 3 | Fail 0 (ignored struggle = hard 0). No struggle → 5.",
+      quickFixAction:
+        "Coach through the struggle, reconnect to why, and offer a workable option.",
       discreteScores: [0, 3, 5],
       bands: [
         { name: "Elite", min: 5, max: 5, criteria: "Coaches through; reconnects to why; options; OR no struggle default." },
@@ -183,6 +199,8 @@ export const coachingRubric: Rubric = {
       maxScore: 5,
       description: "Emotional energy, specific celebration, directional clarity.",
       scoringCriteria: "Elite 5 | Mid 3 | Fail 0.",
+      quickFixAction:
+        "Celebrate something specific from this call, then point to what comes next.",
       discreteScores: [0, 3, 5],
       bands: [
         { name: "Elite", min: 5, max: 5, criteria: "Specific celebration from THIS call + direction." },
@@ -196,6 +214,8 @@ export const coachingRubric: Rubric = {
       maxScore: 5,
       description: "Booked LIVE before call ends — non-negotiable.",
       scoringCriteria: "Elite 5 | Fail 0. Not booked = automatic 0.",
+      quickFixAction:
+        "Book the next call live and confirm the date out loud.",
       discreteScores: [0, 5],
       bands: [
         { name: "Elite", min: 5, max: 5, criteria: "Booked live; date confirmed verbally." },
@@ -208,6 +228,8 @@ export const coachingRubric: Rubric = {
       maxScore: 5,
       description: "Client knows exactly what happens after — coach deliverable with timing. Score in-call promise only.",
       scoringCriteria: "Elite 5 | Mid 3 | Fail 0.",
+      quickFixAction:
+        "Restate the anchor and name the coach follow-up with a specific time.",
       discreteScores: [0, 3, 5],
       bands: [
         { name: "Elite", min: 5, max: 5, criteria: "Anchor restated + coach follow-up with specific timing." },
@@ -221,6 +243,8 @@ export const coachingRubric: Rubric = {
       maxScore: 5,
       description: "Intentional flow through SOP sections; natural weaving, not robotic.",
       scoringCriteria: "Elite 5 | Mid 3 | Fail 0.",
+      quickFixAction:
+        "Keep the SOP flow natural so close and booking are not rushed.",
       discreteScores: [0, 3, 5],
       bands: [
         { name: "Elite", min: 5, max: 5, criteria: "Natural flow; close/booking not rushed." },

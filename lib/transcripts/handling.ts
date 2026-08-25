@@ -28,9 +28,9 @@ export {
 /**
  * Transcript routing for Option C′ map-reduce.
  *
- * Single-pass only when the full transcript + compact rubric fit a safe
- * request budget. Otherwise: overlapping speaker-turn chunks → evidence
- * extract → deterministic aggregate → split synthesis → quote verify.
+ * OpenAI (gpt-4o-mini and similar) has enough context for a single-pass
+ * evaluation of every exercise transcript. Groq / low-TPM providers still
+ * use overlapping chunks → extract → aggregate → synthesis.
  */
 
 export interface TranscriptTurn {
@@ -160,6 +160,10 @@ export function needsChunking(
   transcript: string,
   callType?: CallType,
 ): boolean {
+  if (env.aiProvider() === "openai") {
+    return false;
+  }
+
   const { singlePassChars } = getLimits();
   if (transcript.length > singlePassChars) return true;
 

@@ -8,9 +8,9 @@ function baseDimension(id: string, score: number) {
     id,
     score,
     disabled: false,
-    disabledReason: null,
+    disabledReason: null as string | null,
     notApplicable: false,
-    notApplicableReason: null,
+    notApplicableReason: null as string | null,
     band: "Strong",
     rationale: "Quote-first: the coach referenced the client's notes.",
     evidence: [
@@ -134,5 +134,39 @@ describe("model output validation", () => {
         rubric,
       ),
     ).toThrow(/must be one of/);
+  });
+
+  it("clears leftover scores on disabled or N/A dimensions instead of failing the run", () => {
+    const rubric = getCoachingRubric();
+    const dims = rubric.dimensions.map((d) => {
+      const score = d.discreteScores?.includes(7)
+        ? 7
+        : (d.discreteScores?.find((s) => s > 0) ?? Math.min(7, d.maxScore));
+      return baseDimension(d.id, score);
+    });
+    dims[1] = {
+      ...dims[1]!,
+      notApplicable: true,
+      notApplicableReason: "Not a diagnostics week.",
+      score: 7,
+    };
+    const parsed = validateModelOutput(
+      {
+        oneThing: {
+          recommendation: "x",
+          impact: "y",
+          estimatedPointsGained: null,
+          scoreIfAppliedBasis: "n/a",
+        },
+        brief: "brief",
+        redFlags: [],
+        firedCapIds: [],
+        notes: "",
+        dimensions: dims,
+      },
+      rubric,
+    );
+    expect(parsed.dimensions[1]!.notApplicable).toBe(true);
+    expect(parsed.dimensions[1]!.score).toBeNull();
   });
 });

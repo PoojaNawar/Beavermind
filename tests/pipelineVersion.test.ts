@@ -102,5 +102,6 @@ describe("pipeline version", () => {
     expect(JSON.stringify(client)).not.toContain("SECRET TRANSCRIPT CONTENT");
     expect(client.stage).toBe("evaluating");
     expect(client.progressMessage).toBeNull();
+    expect(client.clientName).toBeNull();
   });
 });

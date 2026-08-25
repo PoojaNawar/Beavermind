@@ -54,18 +54,35 @@ describe("transcript handling", () => {
     expect(chunks[0]!.text.startsWith("[")).toBe(true);
   });
 
-  it("flags transcripts above the single-pass threshold for chunking", () => {
+  it("flags transcripts above the single-pass threshold for chunking on Groq", () => {
+    const provider = process.env.AI_PROVIDER;
     const original = process.env.SINGLE_PASS_TRANSCRIPT_CHARS;
+    process.env.AI_PROVIDER = "groq";
     process.env.SINGLE_PASS_TRANSCRIPT_CHARS = "1000";
     expect(needsChunking("a".repeat(1001))).toBe(true);
     expect(needsChunking("short")).toBe(false);
     if (original === undefined) delete process.env.SINGLE_PASS_TRANSCRIPT_CHARS;
     else process.env.SINGLE_PASS_TRANSCRIPT_CHARS = original;
+    if (provider === undefined) delete process.env.AI_PROVIDER;
+    else process.env.AI_PROVIDER = provider;
   });
 
-  it("flags exercise transcripts for chunked path at default threshold", () => {
+  it("keeps OpenAI on a single model call for exercise-length transcripts", () => {
+    const provider = process.env.AI_PROVIDER;
+    process.env.AI_PROVIDER = "openai";
+    expect(needsChunking(kickoff01, "kickoff")).toBe(false);
+    expect(needsChunking(coaching02, "coaching")).toBe(false);
+    if (provider === undefined) delete process.env.AI_PROVIDER;
+    else process.env.AI_PROVIDER = provider;
+  });
+
+  it("flags exercise transcripts for chunked path on Groq", () => {
+    const provider = process.env.AI_PROVIDER;
+    process.env.AI_PROVIDER = "groq";
     expect(needsChunking(kickoff01, "kickoff")).toBe(true);
     expect(needsChunking(coaching02, "coaching")).toBe(true);
+    if (provider === undefined) delete process.env.AI_PROVIDER;
+    else process.env.AI_PROVIDER = provider;
   });
 
   it("compact rubric prompt excludes full markdown source", () => {

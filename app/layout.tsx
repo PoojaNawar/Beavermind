@@ -1,17 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Source_Sans_3, Syne } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const display = Syne({
+const sans = Inter({
   subsets: ["latin"],
-  variable: "--font-syne",
-  weight: ["500", "600", "700"],
-});
-
-const sans = Source_Sans_3({
-  subsets: ["latin"],
-  variable: "--font-source",
+  variable: "--font-sans-loaded",
   weight: ["400", "500", "600", "700"],
 });
 
@@ -27,25 +21,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${display.variable} ${sans.variable} antialiased`}>
+    <html lang="en" className={sans.variable}>
+      <body className="font-sans antialiased">
         <div className="min-h-screen">
-          <header className="border-b border-[var(--line)]/80 bg-[var(--card)]/70 backdrop-blur-sm">
-            <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
-              <Link href="/" className="group flex items-baseline gap-3">
-                <span className="font-display text-xl font-semibold tracking-tight text-[var(--accent)]">
+          <header className="border-b border-[var(--line)] bg-[var(--card)]">
+            <div className="mx-auto flex max-w-[1180px] items-center justify-between px-5 py-3.5">
+              <Link href="/" className="flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--ink)] text-[11px] font-bold tracking-tight text-white">
+                  BM
+                </span>
+                <span className="text-[15px] font-semibold tracking-tight">
                   BeaverMind
                 </span>
-                <span className="text-sm text-[var(--muted)] group-hover:text-[var(--ink)]">
-                  Call Quality Evaluation
-                </span>
               </Link>
-              <span className="hidden text-xs text-[var(--muted)] sm:inline">
-                Evidence-first QC
-              </span>
             </div>
           </header>
-          <main className="mx-auto max-w-5xl px-5 py-8 sm:py-12">{children}</main>
+          <main className="mx-auto max-w-[1180px] px-5 py-10 sm:py-14">{children}</main>
         </div>
       </body>
     </html>

@@ -27,6 +27,9 @@ export interface EvaluationRow {
   id: string;
   call_type: CallType;
   transcript: string;
+  client_name?: string | null;
+  coach_name?: string | null;
+  client_details?: string | null;
   status: EvaluationStatus;
   stage: string | null;
   result: EvaluationResult | PipelineCheckpoint | null;
@@ -72,6 +75,9 @@ export function rowToRecord(row: EvaluationRow): EvaluationRecord {
     id: row.id,
     callType: row.call_type,
     transcript: row.transcript,
+    clientName: row.client_name ?? null,
+    coachName: row.coach_name ?? null,
+    clientDetails: row.client_details ?? null,
     status: row.status,
     stage: row.stage ?? null,
     result: row.result as EvaluationRecord["result"],
@@ -101,27 +107,57 @@ export async function createEvaluation(args: {
   callType: CallType;
   transcript: string;
   rubricVersion: string;
+  clientName: string;
+  coachName: string | null;
+  clientDetails: string | null;
 }): Promise<EvaluationRecord> {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
+  const baseRow = {
+    call_type: args.callType,
+    transcript: args.transcript,
+    status: "pending" as const,
+    stage: "pending",
+    rubric_version: args.rubricVersion,
+    pipeline_version: PIPELINE_VERSION,
+    retry_count: 0,
+  };
+
+  let { data, error } = await supabase
     .from("evaluations")
     .insert({
-      call_type: args.callType,
-      transcript: args.transcript,
-      status: "pending",
-      stage: "pending",
-      rubric_version: args.rubricVersion,
-      pipeline_version: PIPELINE_VERSION,
-      retry_count: 0,
+      ...baseRow,
+      client_name: args.clientName,
+      coach_name: args.coachName,
+      client_details: args.clientDetails,
     })
     .select("*")
     .single();
 
-  if (error || !data) {
-    throw new Error(`Database error creating evaluation: ${error?.message ?? "unknown"}`);
+  if (error && /client_name|coach_name|client_details|schema cache/i.test(error.message)) {
+    console.warn(
+      "[evaluations] Subject columns missing. Creating the row without them. Run supabase/migrations/003_subject.sql so client/coach persist.",
+    );
+    const retry = await supabase.from("evaluations").insert(baseRow).select("*").single();
+    data = retry.data;
+    error = retry.error;
   }
 
-  return rowToRecord(data as EvaluationRow);
+  if (error || !data) {
+    throw new Error(
+      `Database error creating evaluation: ${error?.message ?? "unknown"}`,
+    );
+  }
+
+  const record = rowToRecord(data as EvaluationRow);
+  if (!record.clientName && args.clientName) {
+    return {
+      ...record,
+      clientName: args.clientName,
+      coachName: args.coachName,
+      clientDetails: args.clientDetails,
+    };
+  }
+  return record;
 }
 
 export async function getEvaluation(

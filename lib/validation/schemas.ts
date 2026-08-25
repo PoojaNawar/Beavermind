@@ -88,10 +88,10 @@ export function validateModelOutput(
     const def = rubric.dimensions.find((d) => d.id === dim.id)!;
 
     if (dim.disabled || dim.notApplicable) {
+      // Models often still emit a leftover score when they mark N/A / disabled.
+      // Trust the flag, drop the score so the call still completes.
       if (dim.score !== null) {
-        throw new Error(
-          `Dimension ${dim.id} is disabled/N/A but has a score`,
-        );
+        dim.score = null;
       }
       continue;
     }
@@ -134,4 +134,21 @@ export function validateModelOutput(
 export const createEvaluationBodySchema = z.object({
   callType: z.enum(["kickoff", "coaching"]),
   transcript: z.string().min(1, "Transcript is required"),
+  clientName: z
+    .string()
+    .trim()
+    .min(1, "Client name is required")
+    .max(120, "Client name is too long"),
+  coachName: z
+    .string()
+    .trim()
+    .max(120, "Coach name is too long")
+    .optional()
+    .transform((value) => (value ? value : null)),
+  clientDetails: z
+    .string()
+    .trim()
+    .max(2000, "Client details are too long")
+    .optional()
+    .transform((value) => (value ? value : null)),
 });

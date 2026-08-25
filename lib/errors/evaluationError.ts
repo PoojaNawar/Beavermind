@@ -41,7 +41,11 @@ export function classifyEvaluationError(err: unknown): EvaluationErrorCode {
   if (/timeout|ETIMEDOUT|aborted|ECONNRESET|ENOTFOUND|fetch failed|503|502/i.test(msg)) {
     return "provider_unavailable";
   }
-  if (/Zod|invalid evaluation structure|Unknown dimension|outside 0|must be one of|Expected 12/i.test(msg)) {
+  if (
+    /Zod|invalid evaluation structure|Unknown dimension|outside 0|must be one of|Expected 12|disabled\/N\/A|missing a score/i.test(
+      msg,
+    )
+  ) {
     return "invalid_model_response";
   }
   if (/validation|Invalid JSON|Empty request|Transcript is/i.test(msg)) {
@@ -65,10 +69,14 @@ export function publicErrorMessage(err: unknown): string {
     case "provider_unavailable":
       return "Evaluation could not be completed because the AI service was temporarily unavailable.";
     case "database_error":
+      if (/003_subject|client_name|coach_name|client_details|schema cache/i.test(rawMessage(err))) {
+        return "The database is missing client and coach columns. In Supabase → SQL Editor, run supabase/migrations/003_subject.sql, then retry.";
+      }
       return "Evaluation could not be saved. Please retry.";
     case "request_invalid":
       return "The request could not be processed. Check the transcript and try again.";
     case "invalid_model_response":
+      return "The evaluator returned a score the rubric could not accept. Please retry.";
     case "validation_failed":
     case "unknown":
     default:

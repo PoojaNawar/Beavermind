@@ -62,7 +62,12 @@ async function createEvaluation(callType: CallType, transcript: string) {
   const res = await fetch(`${BASE}/api/evaluations`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ callType, transcript }),
+    body: JSON.stringify({
+      callType,
+      transcript,
+      clientName: "QA client",
+      coachName: "QA coach",
+    }),
   });
   const body = await res.json();
   return { status: res.status, body };

@@ -49,7 +49,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const { callType, transcript } = parsed.data;
+    const { callType, transcript, clientName, coachName, clientDetails } =
+      parsed.data;
 
     if (!isCallType(callType)) {
       return NextResponse.json({ error: "Invalid call type." }, { status: 400 });
@@ -65,6 +66,9 @@ export async function POST(request: Request) {
       callType,
       transcript: transcript.trim(),
       rubricVersion: rubric.version,
+      clientName,
+      coachName,
+      clientDetails,
     });
 
     const publicBase = appUrl(request);

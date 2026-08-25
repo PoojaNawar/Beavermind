@@ -1,24 +1,26 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #e7eeef;
-  --bg-deep: #d5e0e2;
-  --ink: #142028;
-  --muted: #4d5d66;
-  --accent: #1e4d43;
-  --accent-soft: #cfe0db;
-  --danger: #8b3a2f;
-  --danger-soft: #f3e0db;
-  --warn: #7a5420;
-  --warn-soft: #efe3cc;
-  --card: #f6faf9;
-  --line: #c5d2d4;
-  --good: #1e4d43;
+  --bg: #f3f1ec;
+  --bg-deep: #e8e5de;
+  --ink: #111111;
+  --muted: #6b6b6b;
+  --accent: #111111;
+  --accent-soft: #eceae4;
+  --danger: #c0392b;
+  --danger-soft: #f8e8e6;
+  --warn: #c9a227;
+  --warn-soft: #f7f0d8;
+  --card: #ffffff;
+  --line: #e4e1da;
+  --good: #2f6f4e;
+  --good-soft: #e5f0e9;
+  --gold: #c4a035;
 }
 
 @theme inline {
-  --font-sans: var(--font-source), "Segoe UI", sans-serif;
-  --font-display: var(--font-syne), var(--font-source), sans-serif;
+  --font-sans: var(--font-sans-loaded), "Segoe UI", sans-serif;
+  --font-display: var(--font-sans-loaded), "Segoe UI", sans-serif;
   --color-bg: var(--bg);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
@@ -26,10 +28,7 @@
 }
 
 body {
-  background:
-    radial-gradient(1100px 520px at 8% -8%, #c9ddd8 0%, transparent 58%),
-    radial-gradient(800px 480px at 100% 0%, #c5d5dc 0%, transparent 52%),
-    linear-gradient(180deg, #e7eeef 0%, #dfe8e6 100%);
+  background: var(--bg);
   color: var(--ink);
   font-family: var(--font-sans);
   min-height: 100vh;

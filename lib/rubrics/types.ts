@@ -46,6 +46,8 @@ export interface RubricDimension {
   positiveSignals?: string[];
   negativeSignals?: string[];
   discreteScores?: number[];
+  /** Coach-facing action to reach full marks. Display only — never used to score. */
+  quickFixAction?: string;
 }
 
 export interface AutoCap {
@@ -174,6 +176,9 @@ export interface EvaluationRecord {
   id: string;
   callType: CallType;
   transcript: string;
+  clientName: string | null;
+  coachName: string | null;
+  clientDetails: string | null;
   status: EvaluationStatus;
   stage: string | null;
   result: EvaluationResult | null;

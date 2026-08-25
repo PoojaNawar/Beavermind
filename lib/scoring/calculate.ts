@@ -12,6 +12,7 @@ import {
   summarizeDimensionEvidence,
   summarizeReportEvidence,
 } from "@/lib/transcripts/evidenceQuality";
+import { refreshDimensionQuickFixes } from "@/lib/scoring/quickFix";
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
@@ -166,26 +167,29 @@ export function applyCapsAndBuildResult(args: {
   const overallScore = normalizeToHundred(cappedRaw, effectiveOutOf);
   const grade = gradeFromScore(overallScore, rubric);
 
-  const dimensions: DimensionResult[] = working.map((d) => {
-    const def = dimById.get(d.id)!;
-    const evidence = d.evidence.map(normalizeStoredEvidence);
-    const quality = summarizeDimensionEvidence(evidence, d.notDemonstrated);
-    return {
-      id: d.id,
-      name: def.name,
-      score: d.score,
-      maxScore: def.maxScore,
-      disabled: d.disabled,
-      disabledReason: d.disabledReason,
-      notApplicable: d.notApplicable,
-      notApplicableReason: d.notApplicableReason,
-      band: d.band,
-      rationale: d.rationale,
-      evidence,
-      quickFix: d.quickFix,
-      ...quality,
-    };
-  });
+  const dimensions: DimensionResult[] = refreshDimensionQuickFixes(
+    working.map((d) => {
+      const def = dimById.get(d.id)!;
+      const evidence = d.evidence.map(normalizeStoredEvidence);
+      const quality = summarizeDimensionEvidence(evidence, d.notDemonstrated);
+      return {
+        id: d.id,
+        name: def.name,
+        score: d.score,
+        maxScore: def.maxScore,
+        disabled: d.disabled,
+        disabledReason: d.disabledReason,
+        notApplicable: d.notApplicable,
+        notApplicableReason: d.notApplicableReason,
+        band: d.band,
+        rationale: d.rationale,
+        evidence,
+        quickFix: d.quickFix,
+        ...quality,
+      };
+    }),
+    rubric,
+  );
 
   let scoreIfApplied: number | null = null;
   const basis = model.oneThing.scoreIfAppliedBasis;

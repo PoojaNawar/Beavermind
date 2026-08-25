@@ -20,6 +20,9 @@ interface PollPayload {
   modelName: string | null;
   audit: EvaluationAudit;
   error?: string;
+  clientName?: string | null;
+  coachName?: string | null;
+  clientDetails?: string | null;
 }
 
 const EMPTY_AUDIT: EvaluationAudit = {
@@ -60,7 +63,10 @@ export function EvaluationPoller({ id }: { id: string }) {
       while (!cancelled) {
         const snapshot = await load();
         if (cancelled || !snapshot) return;
-        if (snapshot.status === "completed" || snapshot.status === "failed") {
+        if (snapshot.status === "failed") {
+          return;
+        }
+        if (snapshot.status === "completed" && snapshot.result) {
           return;
         }
 
@@ -77,7 +83,12 @@ export function EvaluationPoller({ id }: { id: string }) {
         }
 
         if (json && !json.error) {
-          if (json.status === "completed" || json.status === "failed") {
+          if (json.status === "failed") {
+            setData(json);
+            setLoadError(null);
+            return;
+          }
+          if (json.status === "completed" && json.result) {
             setData(json);
             setLoadError(null);
             return;
@@ -106,7 +117,9 @@ export function EvaluationPoller({ id }: { id: string }) {
       if (cancelled) return;
       if (
         payload &&
-        (payload.status === "pending" || payload.status === "processing")
+        (payload.status === "pending" ||
+          payload.status === "processing" ||
+          (payload.status === "completed" && !payload.result))
       ) {
         timer = setTimeout(tick, 750);
       }
@@ -141,7 +154,7 @@ export function EvaluationPoller({ id }: { id: string }) {
 
   if (loadError && !data) {
     return (
-      <div className="rounded-2xl border border-[var(--danger)]/25 bg-[var(--danger-soft)] p-6 text-[var(--danger)]">
+      <div className="rounded-2xl bg-[var(--danger-soft)] p-6 text-[var(--danger)]">
         {loadError}
       </div>
     );
@@ -149,8 +162,11 @@ export function EvaluationPoller({ id }: { id: string }) {
 
   if (!data) {
     return (
-      <div className="rounded-2xl border border-[var(--line)] bg-[var(--card)] p-8 text-center text-[var(--muted)]">
-        Loading evaluation…
+      <div className="mx-auto max-w-xl">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+          Evaluation
+        </p>
+        <p className="mt-2 text-3xl font-semibold tracking-tight">Loading…</p>
       </div>
     );
   }
@@ -166,6 +182,9 @@ export function EvaluationPoller({ id }: { id: string }) {
       rubricVersion={data.rubricVersion}
       audit={data.audit ?? EMPTY_AUDIT}
       modelName={data.modelName ?? null}
+      clientName={data.clientName ?? null}
+      coachName={data.coachName ?? null}
+      clientDetails={data.clientDetails ?? null}
       onRetry={data.status === "failed" ? onRetry : undefined}
       retrying={retrying}
     />

@@ -1,32 +1,36 @@
-import { EvaluationForm } from "@/components/EvaluationForm";
+import { EvaluationForm, type RubricSummary } from "@/components/EvaluationForm";
+import { getCoachingRubric } from "@/lib/rubrics/coaching";
+import { getKickoffRubric } from "@/lib/rubrics/kickoff";
+import type { Rubric } from "@/lib/rubrics/types";
+
+function toSummary(rubric: Rubric): RubricSummary {
+  return {
+    id: rubric.id,
+    name: rubric.name,
+    version: rubric.version,
+    dimensionCount: rubric.dimensions.length,
+    totalPoints: rubric.totalPoints,
+  };
+}
 
 export default function HomePage() {
-  return (
-    <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
-      <section className="space-y-5">
-        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">
-          BeaverMind
-        </p>
-        <h1 className="font-display text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl">
-          Call Quality Evaluation
-        </h1>
-        <p className="max-w-md text-lg leading-relaxed text-[var(--muted)]">
-          Score kick-off and coaching calls against a rubric, using quotes from
-          the transcript.
-        </p>
-        <p className="max-w-md text-sm leading-relaxed text-[var(--muted)]">
-          Choose Kick-off or Coaching, then paste the call or upload a .txt /
-          .md file.
-        </p>
-      </section>
+  const rubrics = {
+    kickoff: toSummary(getKickoffRubric()),
+    coaching: toSummary(getCoachingRubric()),
+  };
 
-      <section className="rounded-2xl border border-[var(--line)] bg-[var(--card)]/90 p-5 sm:p-7">
-        <h2 className="font-display text-2xl font-semibold">New evaluation</h2>
-        <p className="mt-1 mb-6 text-sm text-[var(--muted)]">
-          Choose the call type, then paste or upload the transcript.
-        </p>
-        <EvaluationForm />
-      </section>
+  return (
+    <div className="mx-auto w-full max-w-2xl">
+      <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+        New Evaluation
+      </h1>
+      <p className="mt-3 text-base leading-relaxed text-[var(--muted)]">
+        Evaluate each conversation against its rubric with clear, evidence-backed
+        feedback.
+      </p>
+      <div className="mt-10">
+        <EvaluationForm rubrics={rubrics} />
+      </div>
     </div>
   );
 }

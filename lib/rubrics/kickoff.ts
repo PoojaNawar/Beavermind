@@ -53,6 +53,8 @@ export const kickoffRubric: Rubric = {
         "Does the coach demonstrate they reviewed the sales notes BEFORE the call? Score on conduct, not disclosure.",
       scoringCriteria:
         "Elite 9–10 | Strong 6–8 | Mid 4–5 | Weak 1–3 | Fail 0. Credit specific goals/pain/history even without 'I read your notes'.",
+      quickFixAction:
+        "Name two intake details (goals, injury, or history) in the first minutes so prep is obvious.",
       bands: [
         { name: "Elite", min: 9, max: 10, criteria: "Fully reviewed intake; specific goals+name+injuries early; ≥2 CRM details." },
         { name: "Strong", min: 6, max: 8, criteria: "Clear prep evidence with a small gap." },
@@ -65,11 +67,30 @@ export const kickoffRubric: Rubric = {
       id: "d2",
       name: "Rapport & Tone",
       maxScore: 10,
-      description: "Genuine human connection; energy match; client opens up.",
+      description:
+        "Genuine human connection; energy match; client opens up. Elite includes a relevant personal share — not extra small talk.",
       scoringCriteria: "Discrete-ish: Elite 10 | Strong 7 | Mid 3 | Fail 0. Prefer these buckets.",
+      quickFixAction:
+        "Share one relevant personal beat, then pause so the client can open up.",
       discreteScores: [0, 3, 7, 10],
+      positiveSignals: [
+        "Client shares personal stories unprompted",
+        "Natural laughter",
+        "Client says they like how the coach showed up",
+      ],
+      negativeSignals: [
+        "Awkward silences",
+        "Monosyllabic client responses",
+        "Coach talks about themselves excessively",
+      ],
       bands: [
-        { name: "Elite", min: 10, max: 10, criteria: "Warm, personalized, client opens up spontaneously." },
+        {
+          name: "Elite",
+          min: 10,
+          max: 10,
+          criteria:
+            "Warm, personalized, matches energy; shares something personal and relevant; client opens up spontaneously with personal stories.",
+        },
         { name: "Strong", min: 7, max: 7, criteria: "Friendly but surface-level." },
         { name: "Mid", min: 3, max: 3, criteria: "Mechanical / scripted." },
         { name: "Fail", min: 0, max: 0, criteria: "Cold, rushed, skips rapport." },
@@ -81,6 +102,8 @@ export const kickoffRubric: Rubric = {
       maxScore: 5,
       description: "Coach takes control of call structure upfront with time framing and sequenced phases.",
       scoringCriteria: "Elite 4.5–5 | Mid 2.5–3.5 | Weak 1–2 | Fail 0. Numbered list NOT required.",
+      quickFixAction:
+        "State the time, list three sequenced phases, and get a yes before diving in.",
       bands: [
         { name: "Elite", min: 4.5, max: 5, criteria: "Time + ≥3 sequenced phases + client consent." },
         { name: "Mid", min: 2.5, max: 3.5, criteria: "Partial agenda." },
@@ -94,6 +117,8 @@ export const kickoffRubric: Rubric = {
       maxScore: 15,
       description: "Go beyond functional goals to emotional/identity driver; build North Star.",
       scoringCriteria: "Elite 15 | Strong 10 | Mid 5 | Fail 0. No North Star → max 10.",
+      quickFixAction:
+        "Name the emotional why, build a North Star, and lock a 30-day metric the client confirms.",
       discreteScores: [0, 5, 10, 15],
       bands: [
         { name: "Elite", min: 15, max: 15, criteria: "Emotional drivers + North Star + 30-day metric + client confirms." },
@@ -109,6 +134,8 @@ export const kickoffRubric: Rubric = {
       description:
         "Client understands 3-phase Halden Method structure (Retraining → Remodeling → Integrating or equivalents).",
       scoringCriteria: "Elite 9–10 | Strong 6–8 | Mid 3–5 | Weak 1–2 | Fail 0.",
+      quickFixAction:
+        "Walk all three phases with outcomes, an analogy, and a tie back to their goals.",
       bands: [
         { name: "Elite", min: 9, max: 10, criteria: "All 3 phases + outcomes + analogy/cadence + tied to goals." },
         { name: "Strong", min: 6, max: 8, criteria: "All 3 phases correct order; simpler delivery." },
@@ -124,6 +151,8 @@ export const kickoffRubric: Rubric = {
       description: "Prepare client emotionally for difficulty; normalize valleys.",
       scoringCriteria: "Elite 10 | Strong 7 | Mid 3 | Fail 0.",
       discreteScores: [0, 3, 7, 10],
+      quickFixAction:
+        "Name the valleys ahead and separate good pain from bad pain so they are emotionally ready.",
       bands: [
         { name: "Elite", min: 10, max: 10, criteria: "Milestones + emotional friction + valleys + good vs bad pain." },
         { name: "Strong", min: 7, max: 7, criteria: "Basics covered; misses emotional prep." },
@@ -137,6 +166,8 @@ export const kickoffRubric: Rubric = {
       maxScore: 5,
       description: "How client is supported between sessions — channel, response time, community, accountability.",
       scoringCriteria: "Elite 5 | Mid 3 | Fail 0. Score what is said in-call.",
+      quickFixAction:
+        "Spell out channel, response time, community, and how they will be held accountable.",
       discreteScores: [0, 3, 5],
       bands: [
         { name: "Elite", min: 5, max: 5, criteria: "Channels + response time + community + accountability framing." },
@@ -151,6 +182,8 @@ export const kickoffRubric: Rubric = {
       description: "Behavioral patterns, psychology, personalization beyond logistics.",
       scoringCriteria: "Elite 10 | Strong 7 | Mid 3 | Fail 0.",
       discreteScores: [0, 3, 7, 10],
+      quickFixAction:
+        "Ask a behavioral and a self-awareness question, then change the plan from the answer.",
       bands: [
         { name: "Elite", min: 10, max: 10, criteria: "Behavioral + self-awareness questions; personalizes approach." },
         { name: "Strong", min: 7, max: 7, criteria: "1–2 questions; lacks depth." },
@@ -165,6 +198,8 @@ export const kickoffRubric: Rubric = {
       description: "Client knows exactly what to do and when (diagnostics → film → upload → program).",
       scoringCriteria: "Elite 10 | Strong 7 | Mid 3 | Fail 0.",
       discreteScores: [0, 3, 7, 10],
+      quickFixAction:
+        "Confirm the diagnostic → film → upload pipeline with a how-to and a timeline they repeat back.",
       bands: [
         { name: "Elite", min: 10, max: 10, criteria: "Clear pipeline + filming how-to + timeline + client confirms." },
         { name: "Strong", min: 7, max: 7, criteria: "Clear but minor confusion / no demo." },
@@ -178,6 +213,8 @@ export const kickoffRubric: Rubric = {
       maxScore: 5,
       description: "Next call booked LIVE — verbal date/time confirmation is the test.",
       scoringCriteria: "Elite 4.5–5 | Mid 2.5–3.5 | Weak 1–2 | Fail 0.",
+      quickFixAction:
+        "Get a verbal date and time for the next call before hanging up.",
       bands: [
         { name: "Elite", min: 4.5, max: 5, criteria: "Date+time confirmed verbally; constraints handled live." },
         { name: "Mid", min: 2.5, max: 3.5, criteria: "Attempted but not fully secured." },
@@ -191,6 +228,8 @@ export const kickoffRubric: Rubric = {
       maxScore: 5,
       description: "Ends with energy, structured recap, emotional anchor — not just logistics.",
       scoringCriteria: "Elite 5 | Mid 3 | Fail 0. No structured recap → max 3.",
+      quickFixAction:
+        "Close with a structured recap and an emotional confidence anchor, not only logistics.",
       discreteScores: [0, 3, 5],
       bands: [
         { name: "Elite", min: 5, max: 5, criteria: "Structured recap + confidence anchor + emotional reinforcement." },
@@ -204,6 +243,8 @@ export const kickoffRubric: Rubric = {
       maxScore: 5,
       description: "In-call commitments to post-call deliverables with deadlines. Delivery verification out of scope.",
       scoringCriteria: "Elite 4.5–5 | Strong 3.5–4 | Mid 2–3 | Weak 1 | Fail 0.",
+      quickFixAction:
+        "Commit to specific post-call deliverables with precise deadlines.",
       bands: [
         { name: "Elite", min: 4.5, max: 5, criteria: "Multiple explicit commitments with precise deadlines." },
         { name: "Strong", min: 3.5, max: 4, criteria: "Two+ commitments with mostly precise timing." },

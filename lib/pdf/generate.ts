@@ -4,6 +4,8 @@ import {
   dimensionEvidenceUi,
   hydrateEvaluationResult,
 } from "@/lib/transcripts/evidenceQuality";
+import { scoredRationale } from "@/lib/ui/scoreTone";
+import { presentQuickFix } from "@/lib/ui/quickFixDisplay";
 
 function callTypeLabel(callType: string): string {
   return callType === "kickoff" ? "Kick-off Call" : "Coaching Call";
@@ -17,6 +19,9 @@ export async function buildEvaluationPdf(
     audit?: EvaluationAudit | null;
     rubricVersion?: string;
     modelName?: string | null;
+    clientName?: string | null;
+    coachName?: string | null;
+    clientDetails?: string | null;
   },
 ): Promise<Buffer> {
   result = hydrateEvaluationResult(result);
@@ -35,10 +40,10 @@ export async function buildEvaluationPdf(
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    const ink = "#1a1f1c";
-    const muted = "#5c675f";
-    const accent = "#2f5d50";
-    const rule = "#d5ddd8";
+    const ink = "#111111";
+    const muted = "#6b6b6b";
+    const accent = "#111111";
+    const rule = "#e4e1da";
 
     const ensureSpace = (needed: number) => {
       if (doc.y + needed > doc.page.height - 50) {
@@ -70,13 +75,19 @@ export async function buildEvaluationPdf(
     };
 
     // Header
-    doc.fillColor(accent).font("Helvetica-Bold").fontSize(11).text("BEAVERMIND");
+    doc.fillColor(muted).font("Helvetica-Bold").fontSize(9).text("BEAVERMIND  ·  FULL ANALYSIS");
     doc
       .fillColor(ink)
       .font("Helvetica-Bold")
-      .fontSize(20)
-      .text("Call Quality Evaluation");
+      .fontSize(22)
+      .text(meta.clientName?.trim() || callTypeLabel(result.callType));
     doc.moveDown(0.3);
+    if (meta.coachName?.trim()) {
+      metaLine(`Coached by ${meta.coachName.trim()}`);
+    }
+    if (meta.clientDetails?.trim()) {
+      metaLine(meta.clientDetails.trim());
+    }
     metaLine(`${callTypeLabel(result.callType)}  ·  Rubric ${result.rubricVersion}`);
     metaLine(`Evaluation ID: ${meta.id}`);
     metaLine(`Created: ${new Date(meta.createdAt).toLocaleString()}`);
@@ -158,7 +169,7 @@ export async function buildEvaluationPdf(
 
     h1("Twelve Dimensions");
 
-    for (const dim of result.dimensions) {
+    for (const [index, dim] of result.dimensions.entries()) {
       ensureSpace(120);
       const scoreLabel = dim.disabled
         ? "Disabled"
@@ -169,11 +180,11 @@ export async function buildEvaluationPdf(
       doc
         .fillColor(ink)
         .font("Helvetica-Bold")
-        .fontSize(11)
-        .text(`${dim.name}`, { continued: true })
-        .font("Helvetica")
+        .fontSize(12)
+        .text(`${index + 1}.  ${dim.name}`, { continued: true })
+        .font("Helvetica-Bold")
         .fillColor(muted)
-        .text(`  —  ${scoreLabel}${dim.band ? ` (${dim.band})` : ""}`);
+        .text(`    ${scoreLabel}`);
 
       if (dim.disabled && dim.disabledReason) {
         body(`Disabled: ${dim.disabledReason}`);
@@ -208,7 +219,7 @@ export async function buildEvaluationPdf(
         doc.moveDown(0.2);
       }
 
-      body(dim.rationale);
+      body(scoredRationale(dim));
 
       const verified = dim.evidence.filter((e) => e.verificationStatus === "verified");
       const unverified = dim.evidence.filter((e) => e.verificationStatus === "unverified");
@@ -216,18 +227,19 @@ export async function buildEvaluationPdf(
         (e) => e.verificationStatus === "not_demonstrated",
       );
 
-      doc.fillColor(muted).font("Helvetica-Bold").fontSize(9).text("Verified evidence");
+      doc.fillColor(muted).font("Helvetica-Bold").fontSize(9).text("EVIDENCE");
+      doc.moveDown(0.15);
       if (verified.length === 0 && unverified.length === 0 && ndItems.length === 0) {
         body("No transcript evidence attached.");
       }
       for (const ev of verified) {
-        const speaker = ev.speaker ? `[${ev.speaker}] ` : "";
+        const speaker = ev.speaker ? `${ev.speaker}: ` : "";
         const loc = ev.location ? ` (${ev.location})` : "";
         doc
           .fillColor(ink)
           .font("Helvetica-Oblique")
           .fontSize(9)
-          .text(`“${ev.quote}” — ${speaker}VERIFIED${loc}`);
+          .text(`${speaker}“${ev.quote}”  — VERIFIED${loc}`);
       }
       for (const ev of ndItems) {
         doc
@@ -253,8 +265,32 @@ export async function buildEvaluationPdf(
       }
       doc.moveDown(0.3);
 
-      doc.fillColor(accent).font("Helvetica-Bold").fontSize(9).text("Quick fix");
-      body(dim.quickFix);
+      const quickFix = presentQuickFix(dim, result.callType);
+      if (quickFix) {
+        doc.fillColor(muted).font("Helvetica-Bold").fontSize(9).text("QUICK FIX");
+        doc.moveDown(0.15);
+        doc
+          .fillColor(ink)
+          .font("Helvetica-Bold")
+          .fontSize(10)
+          .text(quickFix.title);
+        if (quickFix.body) {
+          doc.moveDown(0.12);
+          body(quickFix.body);
+        } else {
+          doc.moveDown(0.35);
+        }
+        if (quickFix.steps && quickFix.steps.length > 0) {
+          for (const step of quickFix.steps) {
+            doc
+              .fillColor(ink)
+              .font("Helvetica")
+              .fontSize(10)
+              .text(`•  ${step}`, { indent: 12, lineGap: 1 });
+          }
+          doc.moveDown(0.35);
+        }
+      }
 
       doc
         .strokeColor(rule)

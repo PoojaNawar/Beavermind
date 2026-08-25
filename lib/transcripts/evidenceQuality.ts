@@ -7,6 +7,8 @@ import type {
   EvidenceStrength,
   EvidenceVerificationStatus,
 } from "@/lib/rubrics/types";
+import { getRubric } from "@/lib/rubrics";
+import { refreshDimensionQuickFixes } from "@/lib/scoring/quickFix";
 import {
   isNotDemonstratedPlaceholder,
   quoteExistsInTranscript,
@@ -275,7 +277,10 @@ export function hydrateDimensionEvidence(dim: DimensionResult): DimensionResult 
 }
 
 export function hydrateEvaluationResult(result: EvaluationResult): EvaluationResult {
-  const dimensions = result.dimensions.map(hydrateDimensionEvidence);
+  const dimensions = refreshDimensionQuickFixes(
+    result.dimensions.map(hydrateDimensionEvidence),
+    getRubric(result.callType),
+  );
   return {
     ...result,
     dimensions,

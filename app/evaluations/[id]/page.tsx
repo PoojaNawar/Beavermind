@@ -9,12 +9,12 @@ export default async function EvaluationPage({
   const { id } = await params;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Link
         href="/"
-        className="inline-flex text-sm font-medium text-[var(--accent)] hover:underline"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--muted)] hover:text-[var(--ink)]"
       >
-        ← New evaluation
+        ← Back
       </Link>
       <EvaluationPoller id={id} />
     </div>

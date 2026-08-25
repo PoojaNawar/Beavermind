@@ -28,7 +28,12 @@ async function main() {
   const create = await fetch(`${BASE}/api/evaluations`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ callType, transcript }),
+    body: JSON.stringify({
+      callType,
+      transcript,
+      clientName: label,
+      coachName: "Coach",
+    }),
   });
   const createText = await create.text();
   console.log("create HTTP", create.status, createText.slice(0, 400));

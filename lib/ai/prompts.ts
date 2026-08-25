@@ -15,6 +15,7 @@ CRITICAL ANTI-HALLUCINATION RULES:
 8. Score only according to the rubric bands/buckets. For coaching calls, scores must be exact bucket values.
 9. Red flags are independent of overall score — a high score can still have red flags.
 10. For "The One Thing", estimate points gained only when the rubric makes that defensible; otherwise set estimatedPointsGained to null and explain in scoreIfAppliedBasis.
+11. quickFix is what the coach had to do on THIS dimension to reach full marks — one unique sentence. Below full marks, name the missing elite behaviour for that dimension only. Do not repeat the same sentence across dimensions, paste scoring shorthand, or invent extra questions. At full marks, N/A, or disabled: set quickFix to "".
 
 OUTPUT:
 Return structured JSON matching the schema. Include all 12 dimensions.
@@ -37,7 +38,7 @@ CONCISENESS (required for output limits):
 - brief: max 3 sentences
 - Max 1 evidence quote per dimension (shortest relevant quote)
 - rationale: max 2 sentences per dimension
-- quickFix: 1 sentence per dimension
+- quickFix: 1 unique sentence when below full marks; empty string at full marks / N/A
 - redFlags: only if clearly supported by evidence; max 3 items
 - notes: 1-2 sentences max
 `;

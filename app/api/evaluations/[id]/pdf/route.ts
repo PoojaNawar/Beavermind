@@ -43,6 +43,9 @@ export async function GET(
       audit: evaluation.audit,
       rubricVersion: evaluation.rubricVersion,
       modelName: evaluation.modelName,
+      clientName: evaluation.clientName,
+      coachName: evaluation.coachName,
+      clientDetails: evaluation.clientDetails,
     });
 
     return new NextResponse(new Uint8Array(pdf), {

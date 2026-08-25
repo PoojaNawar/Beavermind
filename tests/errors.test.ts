@@ -35,6 +35,11 @@ describe("safe evaluation errors", () => {
     expect(publicErrorMessage(new Error("Invalid API key"))).toMatch(
       /could not be saved/i,
     );
+    expect(
+      publicErrorMessage(
+        new Error("Database error creating evaluation: Could not find the 'client_name' column of 'evaluations' in the schema cache"),
+      ),
+    ).toMatch(/003_subject/i);
   });
 
   it("does not leak Zod or SQL details to the user", () => {
@@ -43,7 +48,10 @@ describe("safe evaluation errors", () => {
     ).not.toMatch(/relation foo/);
     expect(
       publicErrorMessage(new Error("Unknown dimension id from model: d99")),
-    ).toBe("Evaluation could not be completed. Please retry.");
+    ).toBe("The evaluator returned a score the rubric could not accept. Please retry.");
+    expect(
+      publicErrorMessage(new Error("Unknown dimension id from model: d99")),
+    ).not.toMatch(/d99/);
   });
 });
 

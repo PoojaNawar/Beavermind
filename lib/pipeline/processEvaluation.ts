@@ -137,7 +137,6 @@ export async function processEvaluation(
     const durationMs = Math.max(0, Date.now() - started);
     const quality = outcome.result.evidenceQuality;
 
-    await onStage("completed");
     await updateEvaluation(id, {
       status: "completed",
       stage: "completed",

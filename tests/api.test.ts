@@ -8,14 +8,18 @@ describe("API input contracts", () => {
     const parsed = createEvaluationBodySchema.parse({
       callType: "kickoff",
       transcript: "[Dana]: Hello",
+      clientName: "Owen Brandt",
     });
     expect(parsed.callType).toBe("kickoff");
+    expect(parsed.clientName).toBe("Owen Brandt");
+    expect(parsed.coachName).toBeNull();
   });
 
   it("rejects an invalid call type", () => {
     const parsed = createEvaluationBodySchema.safeParse({
       callType: "sales",
       transcript: "[Dana]: Hello",
+      clientName: "Owen Brandt",
     });
     expect(parsed.success).toBe(false);
   });
@@ -24,6 +28,15 @@ describe("API input contracts", () => {
     const parsed = createEvaluationBodySchema.safeParse({
       callType: "coaching",
       transcript: "",
+      clientName: "Owen Brandt",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects a missing client name", () => {
+    const parsed = createEvaluationBodySchema.safeParse({
+      callType: "kickoff",
+      transcript: "[Dana]: Hello",
     });
     expect(parsed.success).toBe(false);
   });
