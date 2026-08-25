@@ -67,19 +67,28 @@ export async function POST(request: Request) {
       rubricVersion: rubric.version,
     });
 
-    if (!process.env.VERCEL) {
+    const publicBase = appUrl(request);
+    const origin = new URL(request.url).origin;
+    const processUrl = `${origin}/api/evaluations/${evaluation.id}/process`;
+
+    if (process.env.VERCEL) {
+      after(() => {
+        void fetch(processUrl, { method: "POST" }).catch(() => {
+          /* report page also POSTs /process */
+        });
+      });
+    } else {
       after(async () => {
         await processEvaluation(evaluation.id);
       });
     }
 
-    const base = appUrl(request);
     return NextResponse.json(
       {
         id: evaluation.id,
         status: evaluation.status,
         stage: evaluation.stage,
-        url: `${base}/evaluations/${evaluation.id}`,
+        url: `${publicBase}/evaluations/${evaluation.id}`,
       },
       { status: 201 },
     );

@@ -71,7 +71,8 @@ export function ProcessingProgress({
     <div className="rounded-2xl border border-[var(--line)] bg-[var(--card)] p-8">
       <h2 className="font-display text-2xl font-semibold">Processing</h2>
       <p className="mt-2 text-sm text-[var(--muted)]">
-        Stay on this page — most calls finish in under a minute.
+        Stay on this page to watch live status. You can also close the tab —
+        the evaluation keeps running, and this URL will show the result.
       </p>
       <div className="mt-5 rounded-xl border border-[var(--accent)]/25 bg-[var(--accent-soft)] px-4 py-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">

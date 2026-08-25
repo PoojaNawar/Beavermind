@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 export async function POST(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -39,7 +39,15 @@ export async function POST(
       );
     }
 
-    if (!process.env.VERCEL) {
+    if (process.env.VERCEL) {
+      const processUrl = new URL(
+        `/api/evaluations/${id}/process`,
+        request.url,
+      ).toString();
+      after(() => {
+        void fetch(processUrl, { method: "POST" }).catch(() => {});
+      });
+    } else {
       after(async () => {
         await processEvaluation(id);
       });
