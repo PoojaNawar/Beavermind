@@ -1,19 +1,22 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getEvaluation, toClientEvaluation } from "@/lib/db/evaluations";
 import { processEvaluation } from "@/lib/pipeline/processEvaluation";
 import { canAcceptRetry } from "@/lib/processing/lease";
-import { publicErrorMessage } from "@/lib/errors/evaluationError";
+import {
+  publicErrorMessage,
+  sanitizeDiagnostic,
+} from "@/lib/errors/evaluationError";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
 /**
- * Run (or resume) evaluation in this invocation.
- * Vercel can freeze `after()` when the create request ends; the report page
- * calls this so the pipeline gets a full function time budget.
+ * Run or resume evaluation in this invocation.
+ * Vercel cannot finish a 6-chunk coaching call in one function; each call
+ * does one model step, then the report page (and after()) starts the next.
  */
 export async function POST(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -45,7 +48,7 @@ export async function POST(
       });
     }
 
-    await processEvaluation(id);
+    const outcome = await processEvaluation(id);
     const latest = await getEvaluation(id);
     if (!latest) {
       return NextResponse.json(
@@ -53,8 +56,22 @@ export async function POST(
         { status: 404 },
       );
     }
+
+    if (outcome === "yielded") {
+      const nextUrl = new URL(
+        `/api/evaluations/${id}/process`,
+        request.url,
+      ).toString();
+      after(() => {
+        void fetch(nextUrl, { method: "POST" }).catch(() => {
+          /* report page also drives the next step */
+        });
+      });
+    }
+
     return NextResponse.json(toClientEvaluation(latest));
   } catch (err) {
+    console.warn(`[evaluations process] ${sanitizeDiagnostic(err)}`);
     return NextResponse.json(
       { error: publicErrorMessage(err) },
       { status: 500 },

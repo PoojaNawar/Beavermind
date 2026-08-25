@@ -54,12 +54,48 @@ export function EvaluationPoller({ id }: { id: string }) {
   }, [id]);
 
   useEffect(() => {
-    void fetch(`/api/evaluations/${id}/process`, { method: "POST" }).catch(
-      () => {
-        /* GET polling still reflects status if process cannot start */
-      },
-    );
-  }, [id]);
+    let cancelled = false;
+
+    async function drive() {
+      while (!cancelled) {
+        const snapshot = await load();
+        if (cancelled || !snapshot) return;
+        if (snapshot.status === "completed" || snapshot.status === "failed") {
+          return;
+        }
+
+        const res = await fetch(`/api/evaluations/${id}/process`, {
+          method: "POST",
+        });
+        if (cancelled) return;
+
+        let json: PollPayload | null = null;
+        try {
+          json = (await res.json()) as PollPayload;
+        } catch {
+          json = null;
+        }
+
+        if (json && !json.error) {
+          if (json.status === "completed" || json.status === "failed") {
+            setData(json);
+            setLoadError(null);
+            return;
+          }
+          if (json.status === "pending") {
+            continue;
+          }
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    }
+
+    void drive();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, load, pollEpoch]);
 
   useEffect(() => {
     let cancelled = false;

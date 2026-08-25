@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getEvaluation } from "@/lib/db/evaluations";
+import { isPipelineCheckpoint } from "@/lib/pipeline/checkpoint";
 import { buildEvaluationPdf } from "@/lib/pdf/generate";
 import { publicErrorMessage } from "@/lib/errors/evaluationError";
 
@@ -20,7 +21,11 @@ export async function GET(
       );
     }
 
-    if (evaluation.status !== "completed" || !evaluation.result) {
+    if (
+      evaluation.status !== "completed" ||
+      !evaluation.result ||
+      isPipelineCheckpoint(evaluation.result)
+    ) {
       return NextResponse.json(
         {
           error:

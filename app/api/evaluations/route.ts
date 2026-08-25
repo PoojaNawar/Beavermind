@@ -5,7 +5,10 @@ import { validateTranscriptLength } from "@/lib/transcripts/handling";
 import { getRubric, isCallType } from "@/lib/rubrics";
 import { createEvaluation } from "@/lib/db/evaluations";
 import { processEvaluation } from "@/lib/pipeline/processEvaluation";
-import { publicErrorMessage } from "@/lib/errors/evaluationError";
+import {
+  publicErrorMessage,
+  sanitizeDiagnostic,
+} from "@/lib/errors/evaluationError";
 import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -64,9 +67,11 @@ export async function POST(request: Request) {
       rubricVersion: rubric.version,
     });
 
-    after(async () => {
-      await processEvaluation(evaluation.id);
-    });
+    if (!process.env.VERCEL) {
+      after(async () => {
+        await processEvaluation(evaluation.id);
+      });
+    }
 
     const base = appUrl(request);
     return NextResponse.json(
@@ -79,6 +84,7 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (err) {
+    console.warn(`[evaluations POST] ${sanitizeDiagnostic(err)}`);
     if (rawLooksLikeClientError(err)) {
       const message = err instanceof Error ? err.message : "Invalid request.";
       return NextResponse.json({ error: message }, { status: 400 });

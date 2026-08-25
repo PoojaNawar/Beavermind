@@ -47,7 +47,9 @@ export function classifyEvaluationError(err: unknown): EvaluationErrorCode {
   if (/validation|Invalid JSON|Empty request|Transcript is/i.test(msg)) {
     return "validation_failed";
   }
-  if (/Database error|Supabase/i.test(msg)) {
+  if (
+    /Database error|Supabase|Invalid API key|JWT expired|PGRST/i.test(msg)
+  ) {
     return "database_error";
   }
   if (/Invalid call type|Invalid JSON body/i.test(msg)) {

@@ -1,13 +1,5 @@
-import { readFileSync } from "fs";
-import path from "path";
 import type { Rubric } from "./types";
-
-function loadMarkdown(relativePath: string): string {
-  return readFileSync(
-    path.join(process.cwd(), relativePath),
-    "utf8",
-  );
-}
+import { loadKickoffMarkdown } from "./loadMarkdown";
 
 export const kickoffRubric: Rubric = {
   id: "kickoff",
@@ -226,7 +218,7 @@ export const kickoffRubric: Rubric = {
 // Lazy-load markdown so build doesn't fail if cwd differs at import time in edge cases
 export function getKickoffRubric(): Rubric {
   if (!kickoffRubric.sourceMarkdown) {
-    kickoffRubric.sourceMarkdown = loadMarkdown("rubrics/kickoff-call-rubric.md");
+    kickoffRubric.sourceMarkdown = loadKickoffMarkdown();
   }
   return kickoffRubric;
 }

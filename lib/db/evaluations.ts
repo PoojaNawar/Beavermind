@@ -16,6 +16,11 @@ import type {
   EvaluationStatus,
   ProcessingPath,
 } from "@/lib/rubrics/types";
+import {
+  checkpointStage,
+  isPipelineCheckpoint,
+  type PipelineCheckpoint,
+} from "@/lib/pipeline/checkpoint";
 
 export interface EvaluationRow {
   id: string;
@@ -23,7 +28,7 @@ export interface EvaluationRow {
   transcript: string;
   status: EvaluationStatus;
   stage: string | null;
-  result: EvaluationResult | null;
+  result: EvaluationResult | PipelineCheckpoint | null;
   error_message: string | null;
   rubric_version: string;
   model_name: string | null;
@@ -68,7 +73,7 @@ export function rowToRecord(row: EvaluationRow): EvaluationRecord {
     transcript: row.transcript,
     status: row.status,
     stage: row.stage ?? null,
-    result: row.result,
+    result: row.result as EvaluationRecord["result"],
     errorMessage: row.error_message,
     rubricVersion: row.rubric_version,
     modelName: row.model_name,
@@ -135,11 +140,12 @@ export async function getEvaluation(
   return rowToRecord(data as EvaluationRow);
 }
 
-/** Polling payload: never include the full transcript. */
+/** Polling payload: never include the full transcript or resume checkpoints. */
 export function toClientEvaluation(record: EvaluationRecord) {
-  const { transcript: _transcript, ...rest } = record;
+  const { transcript: _transcript, result, ...rest } = record;
   return {
     ...rest,
+    result: isPipelineCheckpoint(result) ? null : result,
     stage: stageFromLegacyStatus(record.status, record.stage),
   };
 }
@@ -147,7 +153,7 @@ export function toClientEvaluation(record: EvaluationRecord) {
 export type EvaluationPatch = Partial<{
   status: EvaluationStatus;
   stage: EvaluationStage;
-  result: EvaluationResult | null;
+  result: EvaluationResult | PipelineCheckpoint | null;
   error_message: string | null;
   model_name: string | null;
   provider: string | null;
@@ -218,14 +224,20 @@ export async function claimForProcessing(
       : existing.audit.retryCount;
 
   const now = new Date().toISOString();
+  const checkpoint = isPipelineCheckpoint(existing.result)
+    ? existing.result
+    : null;
   const supabase = getSupabaseAdmin();
 
   let query = supabase
     .from("evaluations")
     .update({
       status: "processing",
-      stage: "pending",
-      processing_started_at: now,
+      stage: checkpoint ? checkpointStage(checkpoint) : "pending",
+      processing_started_at:
+        checkpoint && existing.processingStartedAt
+          ? existing.processingStartedAt
+          : now,
       error_message: null,
       completed_at: null,
       retry_count: nextRetry,

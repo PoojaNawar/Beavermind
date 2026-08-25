@@ -27,6 +27,15 @@ describe("safe evaluation errors", () => {
     expect(publicErrorMessage(new Error("ETIMEDOUT"))).toMatch(/unavailable/i);
   });
 
+  it("maps database failures including invalid API keys", () => {
+    expect(classifyEvaluationError(new Error("Invalid API key"))).toBe(
+      "database_error",
+    );
+    expect(publicErrorMessage(new Error("Invalid API key"))).toMatch(
+      /could not be saved/i,
+    );
+  });
+
   it("does not leak Zod or SQL details to the user", () => {
     expect(
       publicErrorMessage(new Error("Database error updating evaluation: relation foo")),

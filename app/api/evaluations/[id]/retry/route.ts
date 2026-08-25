@@ -39,9 +39,11 @@ export async function POST(
       );
     }
 
-    after(async () => {
-      await processEvaluation(id);
-    });
+    if (!process.env.VERCEL) {
+      after(async () => {
+        await processEvaluation(id);
+      });
+    }
 
     return NextResponse.json({
       id,

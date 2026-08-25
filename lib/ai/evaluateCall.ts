@@ -6,6 +6,7 @@ import {
   modelDimensionSchema,
   modelEvaluationSchema,
   validateModelOutput,
+  type ModelDimensionOutput,
   type ModelEvaluationOutput,
 } from "@/lib/validation/schemas";
 import { applyCapsAndBuildResult } from "@/lib/scoring/calculate";
@@ -31,6 +32,11 @@ import {
 } from "@/lib/ai/structuredOutput";
 import { PIPELINE_VERSION } from "@/lib/pipeline/version";
 import type { EvaluationStage } from "@/lib/pipeline/stages";
+import {
+  type PipelineCheckpoint,
+  isPipelineCheckpoint,
+} from "@/lib/pipeline/checkpoint";
+import { env } from "@/lib/env";
 import {
   buildEvidenceExtractionPrompt,
   buildSystemPrompt,
@@ -60,6 +66,16 @@ export interface EvaluationRunStats {
 }
 
 export type StageListener = (stage: EvaluationStage) => Promise<void>;
+
+export type EvaluateCallOutcome =
+  | { done: true; result: EvaluationResult; stats: EvaluationRunStats }
+  | {
+      done: false;
+      checkpoint: PipelineCheckpoint;
+      stats: EvaluationRunStats;
+    };
+
+export { isPipelineCheckpoint };
 
 interface RunContext {
   onStage?: StageListener;
@@ -145,22 +161,15 @@ async function runStructuredEvaluation(args: {
   return { output: result.object, modelName };
 }
 
-/**
- * Split synthesis (dims 1–6, then 7–12 + summary) so structured JSON fits
- * practical completion-token budgets on a single response.
- */
-async function runSplitSynthesisEvaluation(args: {
+async function runSynthesisFirstBatch(args: {
   callType: CallType;
-  transcript: string;
   evidencePack: string;
   ctx: RunContext;
-}): Promise<{ output: ModelEvaluationOutput; modelName: string }> {
+}): Promise<{ dimensions: ModelDimensionOutput[]; modelName: string }> {
   const rubric = getRubric(args.callType);
   const { model, modelName, provider } = getEvaluationModel();
   const system = buildSystemPrompt(rubric, "synthesis");
-  const dimIds = rubric.dimensions.map((d) => d.id);
-  const firstIds = dimIds.slice(0, 6);
-  const secondIds = dimIds.slice(6);
+  const firstIds = rubric.dimensions.map((d) => d.id).slice(0, 6);
 
   const first = await callModel(args.ctx, `synthesis:${args.callType}:dims1-6`, () =>
     generateObject({
@@ -169,7 +178,7 @@ async function runSplitSynthesisEvaluation(args: {
       mode: structuredObjectMode(provider),
       system,
       prompt: buildUserEvaluationPrompt({
-        transcript: args.transcript,
+        transcript: "",
         mode: "synthesis",
         evidencePack: args.evidencePack,
         dimensionIds: firstIds,
@@ -187,7 +196,18 @@ async function runSplitSynthesisEvaluation(args: {
     }),
   );
 
-  if (provider !== "openai") await pauseBetweenProviderCalls();
+  return { dimensions: first.object.dimensions, modelName };
+}
+
+async function runSynthesisSecondBatch(args: {
+  callType: CallType;
+  evidencePack: string;
+  ctx: RunContext;
+}): Promise<{ output: Omit<ModelEvaluationOutput, "dimensions"> & { dimensions: ModelDimensionOutput[] }; modelName: string }> {
+  const rubric = getRubric(args.callType);
+  const { model, modelName, provider } = getEvaluationModel();
+  const system = buildSystemPrompt(rubric, "synthesis");
+  const secondIds = rubric.dimensions.map((d) => d.id).slice(6);
 
   const second = await callModel(args.ctx, `synthesis:${args.callType}:dims7-12`, () =>
     generateObject({
@@ -196,7 +216,7 @@ async function runSplitSynthesisEvaluation(args: {
       mode: structuredObjectMode(provider),
       system,
       prompt: buildUserEvaluationPrompt({
-        transcript: args.transcript,
+        transcript: "",
         mode: "synthesis",
         evidencePack: args.evidencePack,
         dimensionIds: secondIds,
@@ -214,106 +234,140 @@ async function runSplitSynthesisEvaluation(args: {
     }),
   );
 
-  const merged: ModelEvaluationOutput = {
-    dimensions: [...first.object.dimensions, ...second.object.dimensions],
-    oneThing: second.object.oneThing,
-    brief: second.object.brief,
-    redFlags: second.object.redFlags,
-    firedCapIds: second.object.firedCapIds,
-    notes: second.object.notes,
-  };
-
-  return { output: merged, modelName };
+  return { output: second.object, modelName };
 }
 
-async function extractEvidencePacks(
-  callType: CallType,
-  transcript: string,
-  ctx: RunContext,
-): Promise<{ packs: ChunkEvidencePack[]; chunkCount: number }> {
-  const rubric = getRubric(callType);
+async function extractOneChunk(args: {
+  callType: CallType;
+  chunkText: string;
+  chunkIndex: number;
+  chunkCount: number;
+  ctx: RunContext;
+}): Promise<ChunkEvidencePack> {
+  const rubric = getRubric(args.callType);
   const { model, provider, modelName } = getEvaluationModel();
   const system = buildSystemPrompt(rubric, "extraction");
-  const chunks = chunkTranscript(transcript);
-  const packs: ChunkEvidencePack[] = [];
 
-  for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i]!;
-    if (i > 0 && provider !== "openai") await pauseBetweenProviderCalls();
-
-    const { object } = await callModel(
-      ctx,
-      `extract:${callType}:chunk${chunk.index}`,
-      () =>
-        generateObject({
-          model,
-          schema: chunkEvidencePackSchema,
-          mode: structuredObjectMode(provider),
-          system,
-          prompt: buildEvidenceExtractionPrompt({
-            chunkText: chunk.text,
-            chunkIndex: chunk.index,
-            chunkCount: chunks.length,
-          }),
-          temperature: 0.1,
-          maxTokens: structuredMaxTokens({
-            provider,
-            modelName,
-            kind: "extract",
-          }),
-          maxRetries: 0,
-          abortSignal: AbortSignal.timeout(120_000),
-          experimental_repairText: async ({ text }) => repairJsonText(text),
+  const { object } = await callModel(
+    args.ctx,
+    `extract:${args.callType}:chunk${args.chunkIndex}`,
+    () =>
+      generateObject({
+        model,
+        schema: chunkEvidencePackSchema,
+        mode: structuredObjectMode(provider),
+        system,
+        prompt: buildEvidenceExtractionPrompt({
+          chunkText: args.chunkText,
+          chunkIndex: args.chunkIndex,
+          chunkCount: args.chunkCount,
         }),
-    );
+        temperature: 0.1,
+        maxTokens: structuredMaxTokens({
+          provider,
+          modelName,
+          kind: "extract",
+        }),
+        maxRetries: 0,
+        abortSignal: AbortSignal.timeout(120_000),
+        experimental_repairText: async ({ text }) => repairJsonText(text),
+      }),
+  );
 
-    packs.push(object);
-  }
+  return object;
+}
 
-  return { packs, chunkCount: chunks.length };
+function runStats(args: {
+  chunked: boolean;
+  chunkCount: number;
+  modelCallCount: number;
+  provider: string;
+  modelName: string;
+}): EvaluationRunStats {
+  return {
+    processingPath: args.chunked ? "chunked" : "single",
+    chunkCount: args.chunked ? args.chunkCount : 1,
+    modelCallCount: args.modelCallCount,
+    provider: args.provider,
+    modelName: args.modelName,
+    pipelineVersion: PIPELINE_VERSION,
+  };
+}
+
+function unfinished(args: {
+  checkpoint: PipelineCheckpoint;
+  provider: string;
+  modelName: string;
+}): EvaluateCallOutcome {
+  return {
+    done: false,
+    checkpoint: args.checkpoint,
+    stats: runStats({
+      chunked: true,
+      chunkCount: args.checkpoint.chunkCount,
+      modelCallCount: args.checkpoint.modelCallCount,
+      provider: args.provider,
+      modelName: args.modelName,
+    }),
+  };
 }
 
 /**
  * Main evaluation entry point (Option C′).
  * Provider/model from getEvaluationModel; map-reduce when needsChunking.
  *
- * AI proposes dimension scores and evidence. Backend verifies quotes,
- * applies caps, and computes totals/grade.
+ * On Vercel, one model call per invocation; packs are checkpointed so a
+ * long coaching transcript can finish without changing scoring semantics.
  */
 export async function evaluateCall(args: {
   callType: CallType;
   transcript: string;
   onStage?: StageListener;
-}): Promise<{ result: EvaluationResult; stats: EvaluationRunStats }> {
+  checkpoint?: PipelineCheckpoint | null;
+  maxModelCallsThisInvocation?: number;
+}): Promise<EvaluateCallOutcome> {
   const transcript = args.transcript.trim();
-  const ctx: RunContext = { onStage: args.onStage, modelCallCount: 0 };
+  const saved = args.checkpoint;
+  const ctx: RunContext = {
+    onStage: args.onStage,
+    modelCallCount: saved?.modelCallCount ?? 0,
+  };
   const { provider, modelName } = getEvaluationModel();
   const chunked = needsChunking(transcript, args.callType);
+  const maxCalls =
+    args.maxModelCallsThisInvocation ?? env.stepModelCalls();
 
-  let modelOutput: ModelEvaluationOutput;
-  let modelNameUsed: string;
-  let chunkCount = 0;
-
-  if (chunked) {
-    await emit(ctx, "extracting_evidence");
-    const extracted = await extractEvidencePacks(args.callType, transcript, ctx);
-    chunkCount = extracted.chunkCount;
-
-    await emit(ctx, "aggregating_evidence");
-    const aggregated = aggregateEvidencePacks(extracted.packs, 2);
-    const evidencePack = formatAggregatedEvidence(aggregated);
-
-    if (provider !== "openai") await pauseBetweenProviderCalls();
-    await emit(ctx, "evaluating");
-    const synth = await runSplitSynthesisEvaluation({
-      callType: args.callType,
+  const finish = async (
+    modelOutput: ModelEvaluationOutput,
+    modelNameUsed: string,
+    chunkCount: number,
+  ): Promise<EvaluateCallOutcome> => {
+    await emit(ctx, "validating");
+    const verified = prepareVerifiedModel({
+      model: modelOutput,
+      rubric: getRubric(args.callType),
       transcript,
-      evidencePack,
-      ctx,
     });
-    modelOutput = synth.output;
-    modelNameUsed = synth.modelName;
-  } else {
+    await emit(ctx, "scoring");
+    const result = applyCapsAndBuildResult({
+      model: verified,
+      rubric: getRubric(args.callType),
+      modelName: modelNameUsed,
+    });
+    return {
+      done: true,
+      result,
+      stats: runStats({
+        chunked,
+        chunkCount,
+        modelCallCount: ctx.modelCallCount,
+        provider,
+        modelName,
+      }),
+    };
+  };
+
+  if (!chunked) {
     await emit(ctx, "evaluating");
     const single = await runStructuredEvaluation({
       callType: args.callType,
@@ -321,32 +375,121 @@ export async function evaluateCall(args: {
       mode: "single",
       ctx,
     });
-    modelOutput = single.output;
-    modelNameUsed = single.modelName;
+    return finish(single.output, single.modelName, 1);
   }
 
-  await emit(ctx, "validating");
-  const verified = prepareVerifiedModel({
-    model: modelOutput,
-    rubric: getRubric(args.callType),
-    transcript,
-  });
-  await emit(ctx, "scoring");
-  const result = applyCapsAndBuildResult({
-    model: verified,
-    rubric: getRubric(args.callType),
-    modelName: modelNameUsed,
+  const chunks = chunkTranscript(transcript);
+  let phase = saved?.phase ?? "extract";
+  let packs: ChunkEvidencePack[] = saved?.packs ? [...saved.packs] : [];
+  let nextChunkIndex = saved?.nextChunkIndex ?? 0;
+  let firstDimensions = saved?.firstDimensions;
+  let callsThisInvocation = 0;
+
+  const budgetLeft = () => callsThisInvocation < maxCalls;
+
+  const snapshot = (
+    nextPhase: PipelineCheckpoint["phase"],
+    extra?: Pick<PipelineCheckpoint, "firstDimensions">,
+  ): PipelineCheckpoint => ({
+    kind: "beavermind_checkpoint",
+    version: 1,
+    phase: nextPhase,
+    packs,
+    nextChunkIndex,
+    chunkCount: chunks.length,
+    modelCallCount: ctx.modelCallCount,
+    firstDimensions: extra?.firstDimensions ?? firstDimensions,
   });
 
-  return {
-    result,
-    stats: {
-      processingPath: chunked ? "chunked" : "single",
-      chunkCount: chunked ? chunkCount : 1,
-      modelCallCount: ctx.modelCallCount,
-      provider,
-      modelName,
-      pipelineVersion: PIPELINE_VERSION,
-    },
+  if (phase === "extract") {
+    await emit(ctx, "extracting_evidence");
+    while (nextChunkIndex < chunks.length) {
+      if (!budgetLeft()) {
+        return unfinished({
+          checkpoint: snapshot("extract"),
+          provider,
+          modelName,
+        });
+      }
+      const chunk = chunks[nextChunkIndex]!;
+      if (nextChunkIndex > 0 && provider !== "openai") {
+        await pauseBetweenProviderCalls();
+      }
+      packs.push(
+        await extractOneChunk({
+          callType: args.callType,
+          chunkText: chunk.text,
+          chunkIndex: chunk.index,
+          chunkCount: chunks.length,
+          ctx,
+        }),
+      );
+      nextChunkIndex += 1;
+      callsThisInvocation += 1;
+    }
+    phase = "synthesis_first";
+    if (!budgetLeft()) {
+      return unfinished({
+        checkpoint: snapshot("synthesis_first"),
+        provider,
+        modelName,
+      });
+    }
+  }
+
+  const aggregated = aggregateEvidencePacks(packs, 2);
+  const evidencePack = formatAggregatedEvidence(aggregated);
+
+  if (phase === "synthesis_first") {
+    await emit(ctx, "aggregating_evidence");
+    if (!budgetLeft()) {
+      return unfinished({
+        checkpoint: snapshot("synthesis_first"),
+        provider,
+        modelName,
+      });
+    }
+    if (provider !== "openai") await pauseBetweenProviderCalls();
+    await emit(ctx, "evaluating");
+    const first = await runSynthesisFirstBatch({
+      callType: args.callType,
+      evidencePack,
+      ctx,
+    });
+    firstDimensions = first.dimensions;
+    callsThisInvocation += 1;
+    phase = "synthesis_second";
+    if (!budgetLeft()) {
+      return unfinished({
+        checkpoint: snapshot("synthesis_second", {
+          firstDimensions,
+        }),
+        provider,
+        modelName,
+      });
+    }
+  }
+
+  if (!firstDimensions || firstDimensions.length !== 6) {
+    throw new Error("Invalid JSON: synthesis checkpoint missing first dimension batch.");
+  }
+
+  if (provider !== "openai") await pauseBetweenProviderCalls();
+  await emit(ctx, "evaluating");
+  const second = await runSynthesisSecondBatch({
+    callType: args.callType,
+    evidencePack,
+    ctx,
+  });
+
+  const merged: ModelEvaluationOutput = {
+    dimensions: [...firstDimensions, ...second.output.dimensions],
+    oneThing: second.output.oneThing,
+    brief: second.output.brief,
+    redFlags: second.output.redFlags,
+    firedCapIds: second.output.firedCapIds,
+    notes: second.output.notes,
   };
+
+  return finish(merged, second.modelName, chunks.length);
 }

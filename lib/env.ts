@@ -22,6 +22,19 @@ export const env = {
   supabaseSecret: () =>
     first("SUPABASE_SECRET", "SUPABASE_SERVICE_ROLE_KEY"),
   appUrl: () => first("APP_URL", "NEXT_PUBLIC_APP_URL"),
+  /**
+   * Max model calls per process invocation. Vercel is 1 so long chunked
+   * transcripts resume across requests instead of hitting the function limit.
+   */
+  stepModelCalls: () => {
+    const raw = first("PIPELINE_STEP_MODEL_CALLS");
+    if (raw) {
+      const n = Number(raw);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+    if (process.env.VERCEL) return 1;
+    return Number.POSITIVE_INFINITY;
+  },
   maxChars: () =>
     Number(
       first("MAX_CHARS", "MAX_TRANSCRIPT_CHARS") ??

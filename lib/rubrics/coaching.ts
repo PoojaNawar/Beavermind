@@ -1,10 +1,5 @@
-import { readFileSync } from "fs";
-import path from "path";
 import type { Rubric } from "./types";
-
-function loadMarkdown(relativePath: string): string {
-  return readFileSync(path.join(process.cwd(), relativePath), "utf8");
-}
+import { loadCoachingMarkdown } from "./loadMarkdown";
 
 export const coachingRubric: Rubric = {
   id: "coaching",
@@ -238,7 +233,7 @@ export const coachingRubric: Rubric = {
 
 export function getCoachingRubric(): Rubric {
   if (!coachingRubric.sourceMarkdown) {
-    coachingRubric.sourceMarkdown = loadMarkdown("rubrics/coaching-call-rubric.md");
+    coachingRubric.sourceMarkdown = loadCoachingMarkdown();
   }
   return coachingRubric;
 }
