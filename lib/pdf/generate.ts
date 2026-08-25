@@ -1,9 +1,7 @@
 import PDFDocument from "pdfkit";
 import type { EvaluationAudit, EvaluationResult } from "@/lib/rubrics/types";
-import {
-  dimensionEvidenceUi,
-  hydrateEvaluationResult,
-} from "@/lib/transcripts/evidenceQuality";
+import { dimensionEvidenceUi } from "@/lib/transcripts/evidenceQuality";
+import { hydrateCompletedReport } from "@/lib/scoring/hydrateReport";
 import { scoredRationale } from "@/lib/ui/scoreTone";
 import { presentQuickFix } from "@/lib/ui/quickFixDisplay";
 
@@ -24,7 +22,7 @@ export async function buildEvaluationPdf(
     clientDetails?: string | null;
   },
 ): Promise<Buffer> {
-  result = hydrateEvaluationResult(result);
+  result = hydrateCompletedReport(result);
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       margin: 50,

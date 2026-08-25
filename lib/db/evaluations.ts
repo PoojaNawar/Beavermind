@@ -22,6 +22,7 @@ import {
   isPipelineCheckpoint,
   type PipelineCheckpoint,
 } from "@/lib/pipeline/checkpoint";
+import { hydrateCompletedReport } from "@/lib/scoring/hydrateReport";
 
 export interface EvaluationRow {
   id: string;
@@ -180,9 +181,14 @@ export async function getEvaluation(
 /** Polling payload: never include the full transcript or resume checkpoints. */
 export function toClientEvaluation(record: EvaluationRecord) {
   const { transcript: _transcript, result, ...rest } = record;
+  const safeResult = isPipelineCheckpoint(result)
+    ? null
+    : result
+      ? hydrateCompletedReport(result)
+      : null;
   return {
     ...rest,
-    result: isPipelineCheckpoint(result) ? null : result,
+    result: safeResult,
     progressMessage: clientProgressMessage(result),
     stage: stageFromLegacyStatus(record.status, record.stage),
   };
