@@ -48,7 +48,6 @@ export function EvaluationReport({
   modelName,
   onRetry,
   retrying,
-  progressMessage,
 }: {
   id: string;
   status: EvaluationStatus;
@@ -61,7 +60,6 @@ export function EvaluationReport({
   modelName: string | null;
   onRetry?: () => void;
   retrying?: boolean;
-  progressMessage?: string | null;
 }) {
   if (status === "pending" || status === "processing") {
     return (
@@ -70,7 +68,6 @@ export function EvaluationReport({
         stage={stage}
         processingPath={audit.processingPath}
         evaluationId={id}
-        progressMessage={progressMessage}
       />
     );
   }
