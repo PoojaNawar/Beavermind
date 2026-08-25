@@ -33,6 +33,7 @@ const checkpoint: PipelineCheckpoint = {
   nextChunkIndex: 1,
   chunkCount: 6,
   modelCallCount: 1,
+  progress: "Extracted evidence from 1 of 6 chunks",
 };
 
 function baseRow(
@@ -88,5 +89,8 @@ describe("pipeline checkpoints", () => {
     expect(JSON.stringify(client)).not.toContain("SECRET QUOTE FROM TRANSCRIPT");
     expect(JSON.stringify(client)).not.toContain("SECRET TRANSCRIPT CONTENT");
     expect(client.stage).toBe("extracting_evidence");
+    expect(client.progressMessage).toBe(
+      "Extracted evidence from 1 of 6 chunks",
+    );
   });
 });

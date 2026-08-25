@@ -68,6 +68,7 @@ export interface EvaluationRunStats {
 }
 
 export type StageListener = (stage: EvaluationStage) => Promise<void>;
+export type ProgressListener = (message: string) => Promise<void>;
 
 export type EvaluateCallOutcome =
   | { done: true; result: EvaluationResult; stats: EvaluationRunStats }
@@ -81,6 +82,7 @@ export { isPipelineCheckpoint };
 
 interface RunContext {
   onStage?: StageListener;
+  onProgress?: ProgressListener;
   modelCallCount: number;
 }
 
@@ -95,6 +97,10 @@ async function callModel<T>(
 
 async function emit(ctx: RunContext, stage: EvaluationStage): Promise<void> {
   await ctx.onStage?.(stage);
+}
+
+async function announce(ctx: RunContext, message: string): Promise<void> {
+  await ctx.onProgress?.(message);
 }
 
 function prepareVerifiedModel(args: {
@@ -337,13 +343,19 @@ export async function evaluateCall(args: {
   callType: CallType;
   transcript: string;
   onStage?: StageListener;
+  onProgress?: ProgressListener;
   checkpoint?: PipelineCheckpoint | null;
   stepMode?: "full" | "phase";
 }): Promise<EvaluateCallOutcome> {
   const transcript = args.transcript.trim();
   const saved = args.checkpoint;
+  let lastProgress = saved?.progress;
   const ctx: RunContext = {
     onStage: args.onStage,
+    onProgress: async (message) => {
+      lastProgress = message;
+      await args.onProgress?.(message);
+    },
     modelCallCount: saved?.modelCallCount ?? 0,
   };
   const { provider, modelName } = getEvaluationModel();
@@ -357,12 +369,14 @@ export async function evaluateCall(args: {
     chunkCount: number,
   ): Promise<EvaluateCallOutcome> => {
     await emit(ctx, "validating");
+    await announce(ctx, "Checking quotes against the original transcript");
     const verified = prepareVerifiedModel({
       model: modelOutput,
       rubric: getRubric(args.callType),
       transcript,
     });
     await emit(ctx, "scoring");
+    await announce(ctx, "Calculating the overall score");
     const result = applyCapsAndBuildResult({
       model: verified,
       rubric: getRubric(args.callType),
@@ -383,6 +397,7 @@ export async function evaluateCall(args: {
 
   if (!chunked) {
     await emit(ctx, "evaluating");
+    await announce(ctx, "Scoring the full call against the rubric");
     const single = await runStructuredEvaluation({
       callType: args.callType,
       transcript,
@@ -410,23 +425,37 @@ export async function evaluateCall(args: {
     chunkCount: chunks.length,
     modelCallCount: ctx.modelCallCount,
     firstDimensions: extra?.firstDimensions ?? firstDimensions,
+    progress: lastProgress,
   });
 
   if (phase === "extract") {
     await emit(ctx, "extracting_evidence");
     const remaining = chunks.slice(nextChunkIndex);
     if (remaining.length > 0) {
+      await announce(
+        ctx,
+        remaining.length === 1
+          ? "Extracting evidence from the transcript"
+          : `Extracting evidence from ${remaining.length} transcript chunks`,
+      );
+      let extractedCount = nextChunkIndex;
       if (provider === "openai") {
         const extracted = await Promise.all(
-          remaining.map((chunk) =>
-            extractOneChunk({
+          remaining.map(async (chunk) => {
+            const pack = await extractOneChunk({
               callType: args.callType,
               chunkText: chunk.text,
               chunkIndex: chunk.index,
               chunkCount: chunks.length,
               ctx,
-            }),
-          ),
+            });
+            extractedCount += 1;
+            await announce(
+              ctx,
+              `Extracted evidence from ${extractedCount} of ${chunks.length} chunks`,
+            );
+            return pack;
+          }),
         );
         extracted.sort((a, b) => a.chunkIndex - b.chunkIndex);
         packs.push(...extracted);
@@ -442,6 +471,10 @@ export async function evaluateCall(args: {
               chunkCount: chunks.length,
               ctx,
             }),
+          );
+          await announce(
+            ctx,
+            `Extracted evidence from ${nextChunkIndex + i + 1} of ${chunks.length} chunks`,
           );
         }
       }
@@ -462,10 +495,12 @@ export async function evaluateCall(args: {
 
   if (phase === "synthesis_first") {
     await emit(ctx, "aggregating_evidence");
+    await announce(ctx, "Combining quotes from every chunk");
     if (provider !== "openai") await pauseBetweenProviderCalls();
     await emit(ctx, "evaluating");
 
     if (!isOpenAiReasoningModel(provider, modelName)) {
+      await announce(ctx, "Scoring all 12 dimensions against the rubric");
       const synth = await runStructuredEvaluation({
         callType: args.callType,
         transcript: "",
@@ -476,6 +511,7 @@ export async function evaluateCall(args: {
       return finish(synth.output, synth.modelName, chunks.length);
     }
 
+    await announce(ctx, "Scoring dimensions 1–6");
     const first = await runSynthesisFirstBatch({
       callType: args.callType,
       evidencePack,
@@ -500,6 +536,7 @@ export async function evaluateCall(args: {
 
   if (provider !== "openai") await pauseBetweenProviderCalls();
   await emit(ctx, "evaluating");
+  await announce(ctx, "Scoring dimensions 7–12 and writing the summary");
   const second = await runSynthesisSecondBatch({
     callType: args.callType,
     evidencePack,

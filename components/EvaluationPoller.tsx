@@ -19,6 +19,7 @@ interface PollPayload {
   createdAt: string;
   modelName: string | null;
   audit: EvaluationAudit;
+  progressMessage?: string | null;
   error?: string;
 }
 
@@ -108,7 +109,7 @@ export function EvaluationPoller({ id }: { id: string }) {
         payload &&
         (payload.status === "pending" || payload.status === "processing")
       ) {
-        timer = setTimeout(tick, 2000);
+        timer = setTimeout(tick, 750);
       }
     }
 
@@ -166,6 +167,7 @@ export function EvaluationPoller({ id }: { id: string }) {
       rubricVersion={data.rubricVersion}
       audit={data.audit ?? EMPTY_AUDIT}
       modelName={data.modelName ?? null}
+      progressMessage={data.progressMessage ?? null}
       onRetry={data.status === "failed" ? onRetry : undefined}
       retrying={retrying}
     />

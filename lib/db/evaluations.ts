@@ -18,6 +18,7 @@ import type {
 } from "@/lib/rubrics/types";
 import {
   checkpointStage,
+  clientProgressMessage,
   isPipelineCheckpoint,
   type PipelineCheckpoint,
 } from "@/lib/pipeline/checkpoint";
@@ -146,6 +147,7 @@ export function toClientEvaluation(record: EvaluationRecord) {
   return {
     ...rest,
     result: isPipelineCheckpoint(result) ? null : result,
+    progressMessage: clientProgressMessage(result),
     stage: stageFromLegacyStatus(record.status, record.stage),
   };
 }

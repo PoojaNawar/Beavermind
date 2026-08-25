@@ -20,6 +20,8 @@ export interface PipelineCheckpoint {
   chunkCount: number;
   modelCallCount: number;
   firstDimensions?: ModelDimensionOutput[];
+  /** Coach-facing live status. Safe to send to the client; packs are not. */
+  progress?: string;
 }
 
 export function isPipelineCheckpoint(
@@ -34,4 +36,10 @@ export function checkpointStage(checkpoint: PipelineCheckpoint): EvaluationStage
   if (checkpoint.phase === "extract") return "extracting_evidence";
   if (checkpoint.phase === "synthesis_first") return "aggregating_evidence";
   return "evaluating";
+}
+
+export function clientProgressMessage(result: unknown): string | null {
+  if (!isPipelineCheckpoint(result)) return null;
+  const text = result.progress?.trim();
+  return text ? text : null;
 }

@@ -19,16 +19,41 @@ function stepIndex(stage: EvaluationStage | null): number {
   return (PROCESSING_STEP_ORDER as readonly string[]).indexOf(stage);
 }
 
+function fallbackAction(
+  status: EvaluationStatus,
+  stage: EvaluationStage | null,
+): string {
+  if (status === "pending" && (stage === null || stage === "pending")) {
+    return "Waiting to start";
+  }
+  switch (stage) {
+    case "extracting_evidence":
+      return "Extracting evidence from the transcript";
+    case "aggregating_evidence":
+      return "Combining quotes from every chunk";
+    case "evaluating":
+      return "Scoring the call against the rubric";
+    case "validating":
+      return "Checking quotes against the original transcript";
+    case "scoring":
+      return "Calculating the overall score";
+    default:
+      return "Working on this evaluation";
+  }
+}
+
 export function ProcessingProgress({
   status,
   stage,
   processingPath,
   evaluationId,
+  progressMessage,
 }: {
   status: EvaluationStatus;
   stage: string | null;
   processingPath: EvaluationAudit["processingPath"];
   evaluationId: string;
+  progressMessage?: string | null;
 }) {
   const resolved = stageFromLegacyStatus(status, stage);
   const currentIdx = stepIndex(resolved);
@@ -39,6 +64,8 @@ export function ProcessingProgress({
       resolved !== "pending" &&
       resolved !== "extracting_evidence" &&
       resolved !== "aggregating_evidence");
+  const action =
+    progressMessage?.trim() || fallbackAction(status, resolved);
 
   return (
     <div className="rounded-2xl border border-[var(--line)] bg-[var(--card)] p-8">
@@ -46,6 +73,18 @@ export function ProcessingProgress({
       <p className="mt-2 text-sm text-[var(--muted)]">
         Stay on this page — most calls finish in under a minute.
       </p>
+      <div className="mt-5 rounded-xl border border-[var(--accent)]/25 bg-[var(--accent-soft)] px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+          Now
+        </p>
+        <p className="mt-1 flex items-center gap-2 text-sm font-medium text-[var(--ink)]">
+          <span
+            aria-hidden
+            className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--accent)] animate-pulse"
+          />
+          {action}
+        </p>
+      </div>
       <ol className="mt-6 space-y-2">
         {PROCESSING_STEP_ORDER.map((step, i) => {
           if (

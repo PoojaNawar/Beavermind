@@ -11,6 +11,7 @@ import { publicErrorMessage, sanitizeDiagnostic } from "@/lib/errors/evaluationE
 import {
   checkpointStage,
   isPipelineCheckpoint,
+  type PipelineCheckpoint,
 } from "@/lib/pipeline/checkpoint";
 import {
   assertTransition,
@@ -70,6 +71,27 @@ export async function processEvaluation(
     await setEvaluationStage(id, next);
   };
 
+  let live: PipelineCheckpoint | null = isPipelineCheckpoint(claimed.result)
+    ? { ...claimed.result }
+    : null;
+
+  const persistProgress = async (message: string) => {
+    live = {
+      kind: "beavermind_checkpoint",
+      version: 1,
+      phase: live?.phase ?? "extract",
+      packs: live?.packs ?? [],
+      nextChunkIndex: live?.nextChunkIndex ?? 0,
+      chunkCount: live?.chunkCount ?? 0,
+      modelCallCount: live?.modelCallCount ?? 0,
+      firstDimensions: live?.firstDimensions,
+      progress: message,
+    };
+    await updateEvaluation(id, {
+      result: live,
+    });
+  };
+
   try {
     const { provider, modelName } = getEvaluationModel();
     const processingPath = needsChunking(claimed.transcript, claimed.callType)
@@ -83,10 +105,13 @@ export async function processEvaluation(
       processing_path: processingPath,
     });
 
+    await persistProgress("Starting evaluation");
+
     const outcome = await evaluateCall({
       callType: claimed.callType,
       transcript: claimed.transcript,
       onStage,
+      onProgress: persistProgress,
       checkpoint: isPipelineCheckpoint(claimed.result) ? claimed.result : null,
     });
 
