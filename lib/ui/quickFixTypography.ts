@@ -2,6 +2,8 @@
  * Quick Fix text hygiene. Display can use a real arrow; PDF Helvetica cannot.
  * Canonical stored form is ASCII " -> ".
  */
+import { pdfSafeText } from "@/lib/pdf/text";
+
 const UNICODE_ARROWS = /[→⟶➔➜➡︎▸►]/g;
 
 export function sanitizeQuickFixTypography(text: string): string {
@@ -22,5 +24,5 @@ export function quickFixForDisplay(text: string): string {
 }
 
 export function quickFixForPdf(text: string): string {
-  return sanitizeQuickFixTypography(text).replace(UNICODE_ARROWS, "->");
+  return pdfSafeText(sanitizeQuickFixTypography(text));
 }

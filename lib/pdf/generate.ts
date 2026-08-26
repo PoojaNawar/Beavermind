@@ -5,6 +5,7 @@ import { hydrateCompletedReport } from "@/lib/scoring/hydrateReport";
 import { scoredRationale } from "@/lib/ui/scoreTone";
 import { presentQuickFix } from "@/lib/ui/quickFixDisplay";
 import { quickFixForPdf } from "@/lib/ui/quickFixTypography";
+import { pdfSafeText } from "@/lib/pdf/text";
 
 function callTypeLabel(callType: string): string {
   return callType === "kickoff" ? "Kick-off Call" : "Coaching Call";
@@ -30,7 +31,7 @@ export async function buildEvaluationPdf(
       margin: 50,
       size: "LETTER",
       info: {
-        Title: `Call Evaluation — ${callTypeLabel(result.callType)}`,
+        Title: pdfSafeText(`Call Evaluation - ${callTypeLabel(result.callType)}`),
         Author: "BeaverMind Call Evaluator",
       },
     });
@@ -53,34 +54,34 @@ export async function buildEvaluationPdf(
 
     const h1 = (text: string) => {
       ensureSpace(36);
-      doc.fillColor(ink).font("Helvetica-Bold").fontSize(18).text(text);
+      doc.fillColor(ink).font("Helvetica-Bold").fontSize(18).text(pdfSafeText(text));
       doc.moveDown(0.4);
     };
 
     const h2 = (text: string) => {
       ensureSpace(28);
-      doc.fillColor(accent).font("Helvetica-Bold").fontSize(12).text(text);
+      doc.fillColor(accent).font("Helvetica-Bold").fontSize(12).text(pdfSafeText(text));
       doc.moveDown(0.25);
     };
 
     const body = (text: string) => {
-      doc.fillColor(ink).font("Helvetica").fontSize(10).text(text, {
+      doc.fillColor(ink).font("Helvetica").fontSize(10).text(pdfSafeText(text), {
         lineGap: 2,
       });
       doc.moveDown(0.4);
     };
 
     const metaLine = (text: string) => {
-      doc.fillColor(muted).font("Helvetica").fontSize(9).text(text);
+      doc.fillColor(muted).font("Helvetica").fontSize(9).text(pdfSafeText(text));
     };
 
     // Header
-    doc.fillColor(muted).font("Helvetica-Bold").fontSize(9).text("BEAVERMIND  ·  FULL ANALYSIS");
+    doc.fillColor(muted).font("Helvetica-Bold").fontSize(9).text(pdfSafeText("BEAVERMIND  |  FULL ANALYSIS"));
     doc
       .fillColor(ink)
       .font("Helvetica-Bold")
       .fontSize(22)
-      .text(meta.clientName?.trim() || callTypeLabel(result.callType));
+      .text(pdfSafeText(meta.clientName?.trim() || callTypeLabel(result.callType)));
     doc.moveDown(0.3);
     if (meta.coachName?.trim()) {
       metaLine(`Coached by ${meta.coachName.trim()}`);
@@ -107,16 +108,16 @@ export async function buildEvaluationPdf(
       .fillColor(ink)
       .font("Helvetica-Bold")
       .fontSize(28)
-      .text(`${result.overallScore}`, { continued: true })
+      .text(pdfSafeText(`${result.overallScore}`), { continued: true })
       .font("Helvetica")
       .fontSize(14)
       .fillColor(muted)
-      .text(` / 100`);
+      .text(pdfSafeText(` / 100`));
     doc
       .fillColor(accent)
       .font("Helvetica-Bold")
       .fontSize(14)
-      .text(result.grade);
+      .text(pdfSafeText(result.grade));
     if (result.scoreOutOf !== 100) {
       metaLine(
         `Raw score normalized from ${result.scoreOutOf} available points (optional dimensions disabled/N/A).`,
@@ -145,13 +146,13 @@ export async function buildEvaluationPdf(
     } else {
       for (const flag of result.redFlags) {
         ensureSpace(60);
-        doc.fillColor(ink).font("Helvetica-Bold").fontSize(10).text(flag.title);
+        doc.fillColor(ink).font("Helvetica-Bold").fontSize(10).text(pdfSafeText(flag.title));
         body(flag.explanation);
         doc
           .fillColor(muted)
           .font("Helvetica-Oblique")
           .fontSize(9)
-          .text(`Evidence: ${flag.evidence}`);
+          .text(pdfSafeText(`Evidence: ${flag.evidence}`));
         doc.moveDown(0.5);
       }
     }
@@ -181,10 +182,10 @@ export async function buildEvaluationPdf(
         .fillColor(ink)
         .font("Helvetica-Bold")
         .fontSize(12)
-        .text(`${index + 1}.  ${dim.name}`, { continued: true })
+        .text(pdfSafeText(`${index + 1}.  ${dim.name}`), { continued: true })
         .font("Helvetica-Bold")
         .fillColor(muted)
-        .text(`    ${scoreLabel}`);
+        .text(pdfSafeText(`    ${scoreLabel}`));
 
       if (dim.disabled && dim.disabledReason) {
         body(`Disabled: ${dim.disabledReason}`);
@@ -203,18 +204,22 @@ export async function buildEvaluationPdf(
           )
           .font("Helvetica-Bold")
           .fontSize(9)
-          .text(`Evidence status: ${evidenceUi.label}`);
+          .text(pdfSafeText(`Evidence status: ${evidenceUi.label}`));
         doc
           .fillColor(muted)
           .font("Helvetica")
           .fontSize(9)
-          .text(`Evidence strength: ${dim.evidenceStrength} (does not affect score)`);
+          .text(
+            pdfSafeText(
+              `Evidence strength: ${dim.evidenceStrength} (does not affect score)`,
+            ),
+          );
         if (evidenceUi.explanation) {
           doc
             .fillColor(ink)
             .font("Helvetica")
             .fontSize(9)
-            .text(evidenceUi.explanation);
+            .text(pdfSafeText(evidenceUi.explanation));
         }
         doc.moveDown(0.2);
       }
@@ -239,14 +244,16 @@ export async function buildEvaluationPdf(
           .fillColor(ink)
           .font("Helvetica-Oblique")
           .fontSize(9)
-          .text(`${speaker}“${ev.quote}”  — VERIFIED${loc}`);
+          .text(
+            pdfSafeText(`${speaker}"${ev.quote}"  - VERIFIED${loc}`),
+          );
       }
       for (const ev of ndItems) {
         doc
           .fillColor(muted)
           .font("Helvetica")
           .fontSize(9)
-          .text(`${ev.quote} — NOT DEMONSTRATED`);
+          .text(pdfSafeText(`${ev.quote} - NOT DEMONSTRATED`));
       }
       if (unverified.length > 0) {
         doc
@@ -260,7 +267,11 @@ export async function buildEvaluationPdf(
             .fillColor(ink)
             .font("Helvetica-Oblique")
             .fontSize(9)
-            .text(`“${ev.quote}” — ${speaker}UNVERIFIED — not found in original transcript`);
+            .text(
+              pdfSafeText(
+                `"${ev.quote}" - ${speaker}UNVERIFIED - not found in original transcript`,
+              ),
+            );
         }
       }
       doc.moveDown(0.3);
@@ -286,7 +297,10 @@ export async function buildEvaluationPdf(
               .fillColor(ink)
               .font("Helvetica")
               .fontSize(10)
-              .text(`•  ${quickFixForPdf(step)}`, { indent: 12, lineGap: 1 });
+              .text(pdfSafeText(`*  ${quickFixForPdf(step)}`), {
+                indent: 12,
+                lineGap: 1,
+              });
           }
           doc.moveDown(0.35);
         }

@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { getEvaluation } from "@/lib/db/evaluations";
 import { isPipelineCheckpoint } from "@/lib/pipeline/checkpoint";
 import { buildEvaluationPdf } from "@/lib/pdf/generate";
-import { publicErrorMessage } from "@/lib/errors/evaluationError";
+import {
+  publicErrorMessage,
+  sanitizeDiagnostic,
+} from "@/lib/errors/evaluationError";
 
 export const runtime = "nodejs";
 
@@ -58,6 +61,7 @@ export async function GET(
       },
     });
   } catch (err) {
+    console.warn(`[pdf GET] ${sanitizeDiagnostic(err)}`);
     return NextResponse.json(
       { error: publicErrorMessage(err) },
       { status: 500 },
