@@ -69,7 +69,7 @@ export const kickoffRubric: Rubric = {
       maxScore: 10,
       description:
         "Genuine human connection; energy match; client opens up. Elite includes a relevant personal share — not extra small talk.",
-      scoringCriteria: "Discrete-ish: Elite 10 | Strong 7 | Mid 3 | Fail 0. Prefer these buckets.",
+      scoringCriteria: "Discrete-ish: Elite 10 | Strong 7 | Mid 3 | Fail 0. Prefer these buckets. If the coach shared a relevant personal story AND the client told a personal story, do not score 7 solely because the share was brief.",
       quickFixAction:
         "Share one relevant personal beat, then pause so the client can open up.",
       discreteScores: [0, 3, 7, 10],
@@ -227,7 +227,8 @@ export const kickoffRubric: Rubric = {
       name: "Close, Recap & Confidence",
       maxScore: 5,
       description: "Ends with energy, structured recap, emotional anchor — not just logistics.",
-      scoringCriteria: "Elite 5 | Mid 3 | Fail 0. No structured recap → max 3.",
+      scoringCriteria:
+        "Elite 5 | Mid 3 | Fail 0. Cap max 3 ONLY when there is no structured recap in THIS transcript. If recap + confidence anchor + emotional reinforcement are all present, score 5. Do not default to 3 because other calls often miss recap.",
       quickFixAction:
         "Close with a structured recap and an emotional confidence anchor, not only logistics.",
       discreteScores: [0, 3, 5],

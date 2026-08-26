@@ -20,9 +20,10 @@ export async function buildEvaluationPdf(
     clientName?: string | null;
     coachName?: string | null;
     clientDetails?: string | null;
+    transcript?: string | null;
   },
 ): Promise<Buffer> {
-  result = hydrateCompletedReport(result);
+  result = hydrateCompletedReport(result, meta.transcript);
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       margin: 50,

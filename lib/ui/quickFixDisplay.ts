@@ -34,6 +34,24 @@ function isKickoffCloseRecap(dim: DimensionResult, callType: string): boolean {
   return callType === "kickoff" && dim.id === "d11";
 }
 
+function verifiedQuotes(dim: DimensionResult): string {
+  return dim.evidence
+    .filter((item) => item.verificationStatus === "verified")
+    .map((item) => item.quote)
+    .join("\n")
+    .toLowerCase();
+}
+
+function alreadyHasStructuredRecap(dim: DimensionResult): boolean {
+  const quotes = verifiedQuotes(dim);
+  if (!quotes.trim()) return false;
+  return (
+    /\brecap\b/.test(quotes) ||
+    /here'?s what we (covered|did|walked)/.test(quotes) ||
+    (quotes.includes("north star") && /day[- ]thirty|day 30/.test(quotes))
+  );
+}
+
 function sourceText(dim: DimensionResult): string {
   return dim.quickFix.trim();
 }
@@ -120,6 +138,14 @@ export function presentQuickFix(
     isKickoffCloseRecap(dim, callType) &&
     ANCHORED_RECAP_RE.test(`${source} ${dim.rationale}`)
   ) {
+    if (alreadyHasStructuredRecap(dim)) {
+      return {
+        title: "The recap is already in the transcript",
+        body: "Do not treat this as a missing recap. The verified quotes already include a structured close. If the score is below 5, the remaining gap is confidence or emotional reinforcement — not listing the agenda again.",
+        steps: null,
+        complete: false,
+      };
+    }
     return {
       title: "Make the recap emotionally anchored",
       body: "Close by summarizing:",

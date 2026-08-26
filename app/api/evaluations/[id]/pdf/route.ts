@@ -46,6 +46,7 @@ export async function GET(
       clientName: evaluation.clientName,
       coachName: evaluation.coachName,
       clientDetails: evaluation.clientDetails,
+      transcript: evaluation.transcript,
     });
 
     return new NextResponse(new Uint8Array(pdf), {

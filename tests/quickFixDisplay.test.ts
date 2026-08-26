@@ -111,6 +111,33 @@ describe("presentQuickFix", () => {
     ]);
   });
 
+  it("does not ask for a recap when verified quotes already contain one", () => {
+    const view = presentQuickFix(
+      dim({
+        id: "d11",
+        name: "Close, Recap & Confidence",
+        score: 3,
+        maxScore: 5,
+        quickFix:
+          "Incorporate a more structured recap with emotional reinforcement to enhance the closing of the call.",
+        rationale:
+          "The recap referenced Lily and the climbing gym but stayed generic.",
+        evidence: [
+          verified(
+            "Okay, let's do a quick recap before we hop off. Today we reconnected, and you shared something pretty real with me about Lily and the climbing gym, and that's our North Star now. Day thirty, our two markers are sitting through a full ninety-minute meeting.",
+          ),
+        ],
+        verifiedEvidenceCount: 1,
+        evidenceFound: true,
+        evidenceStrength: "medium",
+      }),
+      "kickoff",
+    );
+    expect(view?.title).toMatch(/already in the transcript/i);
+    expect(view?.steps).toBeNull();
+    expect(view?.body).not.toMatch(/close by summarizing/i);
+  });
+
   it("does not attach recap steps to a non-close dimension", () => {
     const view = presentQuickFix(
       dim({

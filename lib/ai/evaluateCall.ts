@@ -389,6 +389,7 @@ export async function evaluateCall(args: {
       model: verified,
       rubric: getRubric(args.callType),
       modelName: modelNameUsed,
+      transcript,
     });
     return {
       done: true,

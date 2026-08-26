@@ -184,7 +184,7 @@ export function toClientEvaluation(record: EvaluationRecord) {
   const safeResult = isPipelineCheckpoint(result)
     ? null
     : result
-      ? hydrateCompletedReport(result)
+      ? hydrateCompletedReport(result, _transcript)
       : null;
   return {
     ...rest,

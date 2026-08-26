@@ -13,6 +13,10 @@ import {
   summarizeReportEvidence,
 } from "@/lib/transcripts/evidenceQuality";
 import { refreshDimensionQuickFixes } from "@/lib/scoring/quickFix";
+import {
+  kickoffHasEliteClose,
+  kickoffHasStructuredRecap,
+} from "@/lib/scoring/kickoffClose";
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
@@ -59,8 +63,9 @@ export function applyCapsAndBuildResult(args: {
   model: ModelEvaluationOutput;
   rubric: Rubric;
   modelName: string;
+  transcript?: string;
 }): EvaluationResult {
-  const { model, rubric, modelName } = args;
+  const { model, rubric, modelName, transcript } = args;
   const firedCaps: FiredCap[] = [];
   const dimById = new Map(rubric.dimensions.map((d) => [d.id, d]));
 
@@ -125,16 +130,16 @@ export function applyCapsAndBuildResult(args: {
     }
   }
 
-  // Kickoff special: no structured recap → D11 max 3 (if model didn't already)
+  // Kickoff D11: cap/restore from the transcript, not from rationale wording.
   if (rubric.id === "kickoff") {
     const d11 = working.find((d) => d.id === "d11");
-    if (
-      d11 &&
-      d11.score !== null &&
-      d11.score > 3 &&
-      /no structured recap|missing structured recap/i.test(d11.rationale)
-    ) {
-      d11.score = 3;
+    if (d11 && !d11.disabled && !d11.notApplicable && d11.score !== null) {
+      if (transcript && kickoffHasEliteClose(transcript)) {
+        d11.score = 5;
+        d11.quickFix = "";
+      } else if (transcript && !kickoffHasStructuredRecap(transcript) && d11.score > 3) {
+        d11.score = 3;
+      }
     }
   }
 
