@@ -1,6 +1,43 @@
-import type { DimensionResult, EvaluationResult } from "@/lib/rubrics/types";
-import { gradeFromScore, normalizeToHundred } from "@/lib/scoring/calculate";
-import { getRubric } from "@/lib/rubrics";
+import type {
+  CallType,
+  DimensionResult,
+  EvaluationResult,
+  GradeBand,
+} from "@/lib/rubrics/types";
+
+/**
+ * Client-safe scoring helpers.
+ * Do NOT import @/lib/rubrics (or loadMarkdown / fs) from this module —
+ * it is used by the report UI in the browser.
+ */
+
+function normalizeToHundred(rawScore: number, scoreOutOf: number): number {
+  if (scoreOutOf === 100) return Math.round(rawScore);
+  return Math.round((rawScore / scoreOutOf) * 100);
+}
+
+/** Shared grade thresholds for both rubrics (Elite 90–100 … Fail 0–59). */
+function gradeFromHundred(score: number): GradeBand {
+  if (score >= 90) return "Elite";
+  if (score >= 80) return "Strong";
+  if (score >= 70) return "Inconsistent";
+  if (score >= 60) return "At risk";
+  return "Fail";
+}
+
+/**
+ * Total-score auto-caps from the typed rubrics, keyed for client use
+ * without reading markdown/fs.
+ */
+function totalCapMax(callType: CallType, capId: string): number | undefined {
+  if (capId === "no-follow-ups") return 70;
+  if (capId === "unresolved-confusion") return 75;
+  if (capId === "no-action-steps") return 70;
+  if (capId === "coach-monologue") {
+    return callType === "kickoff" ? 80 : 75;
+  }
+  return undefined;
+}
 
 /**
  * Coaching manager skim: Connection · Confidence · Continuity.
@@ -89,7 +126,11 @@ export function coachingPillars(result: EvaluationResult): PillarSummary[] {
       const weakRatio = weakest.score / weakest.maxScore;
       const worseGap = gap > weakGap;
       const sameGapWorseRatio = gap === weakGap && ratio < weakRatio;
-      const sameGapZero = gap === weakGap && ratio === weakRatio && dim.score === 0 && weakest.score > 0;
+      const sameGapZero =
+        gap === weakGap &&
+        ratio === weakRatio &&
+        dim.score === 0 &&
+        weakest.score > 0;
       if (worseGap || sameGapWorseRatio || sameGapZero) {
         weakest = {
           name: dim.name,
@@ -114,9 +155,7 @@ export function coachingPillars(result: EvaluationResult): PillarSummary[] {
 
   if (pillars.length === 0) return pillars;
 
-  const worstRatio = Math.min(
-    ...pillars.map((p) => p.ratio ?? 1),
-  );
+  const worstRatio = Math.min(...pillars.map((p) => p.ratio ?? 1));
   return pillars.map((p) => ({
     ...p,
     dragged: p.ratio !== null && p.ratio === worstRatio && p.ratio < 0.8,
@@ -259,6 +298,7 @@ function humanBasis(result: EvaluationResult, lifts: Map<string, number>): strin
 /**
  * Backend-owned projection: same calculator as the final score.
  * Never trusts the model's estimatedPointsGained.
+ * Safe for client bundles (no fs / rubric markdown).
  */
 export function computeScoreIfApplied(result: EvaluationResult): {
   scoreIfApplied: number | null;
@@ -285,14 +325,9 @@ export function computeScoreIfApplied(result: EvaluationResult): {
     raw += lifts.get(dim.id) ?? dim.score;
   }
 
-  // Total caps that are independent of The One Thing still apply.
-  const rubric = getRubric(result.callType);
+  // Total caps independent of The One Thing still apply.
   let cappedRaw = raw;
   for (const cap of result.firedCaps) {
-    const def = rubric.autoCaps.find((c) => c.id === cap.id);
-    if (!def?.maxTotal) continue;
-    // Booking / vision / north-star / accountability dim caps are assumed fixed
-    // by The One Thing — only keep unrelated total caps.
     if (
       cap.id === "next-call-not-booked" ||
       cap.id === "no-long-term-vision" ||
@@ -302,7 +337,9 @@ export function computeScoreIfApplied(result: EvaluationResult): {
     ) {
       continue;
     }
-    const scaled = Math.round((def.maxTotal / 100) * (available || 100));
+    const maxTotal = totalCapMax(result.callType, cap.id);
+    if (maxTotal === undefined) continue;
+    const scaled = Math.round((maxTotal / 100) * (available || 100));
     if (cappedRaw > scaled) cappedRaw = scaled;
   }
 
@@ -321,6 +358,6 @@ export function computeScoreIfApplied(result: EvaluationResult): {
   };
 }
 
-export function projectedGrade(score: number, callType: EvaluationResult["callType"]) {
-  return gradeFromScore(score, getRubric(callType));
+export function projectedGrade(score: number): GradeBand {
+  return gradeFromHundred(score);
 }
