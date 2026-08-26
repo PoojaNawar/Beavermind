@@ -13,6 +13,10 @@ export const kickoffRubric: Rubric = {
     "Every score grounded in direct transcript evidence — never assumptions or mood.",
     "Quote-first rationale. If behaviour not verifiable, score lower tier of the correct band — do not collapse bands.",
     "Elite / 10/10 only when every elite criterion for that dimension is evidenced. Partial coverage is Strong, not Elite.",
+    "D2: a personal story is not automatically Elite. Score relevance, whether it showed understanding, resonance, returning focus to the client, and whether it felt natural.",
+    "D4: score whether the emotional why was identified, stated back, confirmed, turned into a North Star, and locked to a 30-day marker. Do not penalize discovery that happens after agenda if that work is complete.",
+    "D5: naming the three phases is not Elite. Score what each phase does, the outcome, analogy if useful, and the tie to this client's goal.",
+    "D9: the client must understand what, how, where, and by when, and the coach must verify understanding. Equivalent confirmation counts; a scripted repeat-back is not required.",
     "D7 and D12 score what is communicated in-call, not post-call delivery.",
   ],
   gradeBands: [
@@ -70,9 +74,10 @@ export const kickoffRubric: Rubric = {
       maxScore: 10,
       description:
         "Genuine human connection; energy match; client opens up. Elite includes a relevant personal share — not extra small talk.",
-      scoringCriteria: "Discrete-ish: Elite 10 | Strong 7 | Mid 3 | Fail 0. Prefer these buckets. If the coach shared a relevant personal story AND the client told a personal story, do not score 7 solely because the share was brief.",
+      scoringCriteria:
+        "Discrete-ish: Elite 10 | Strong 7 | Mid 3 | Fail 0. Prefer these buckets. A personal story is not automatically Strong or Elite. Score whether it was relevant, used to show understanding, created resonance, returned focus to the client, and felt natural. Surface share without connecting back = 7.",
       quickFixAction:
-        "Share one relevant personal beat, then pause so the client can open up.",
+        "Share a brief, relevant personal experience that mirrors the client's situation, then connect it back to what the client is feeling.",
       discreteScores: [0, 3, 7, 10],
       positiveSignals: [
         "Client shares personal stories unprompted",
@@ -90,9 +95,9 @@ export const kickoffRubric: Rubric = {
           min: 10,
           max: 10,
           criteria:
-            "Warm, personalized, matches energy; shares something personal and relevant; client opens up spontaneously with personal stories.",
+            "Warm, personalized, matches energy; relevant personal share that demonstrates understanding and returns focus to the client; client opens up with personal stories.",
         },
-        { name: "Strong", min: 7, max: 7, criteria: "Friendly but surface-level." },
+        { name: "Strong", min: 7, max: 7, criteria: "Friendly but surface-level. Personal share without connecting it to the client's situation stays here." },
         { name: "Mid", min: 3, max: 3, criteria: "Mechanical / scripted." },
         { name: "Fail", min: 0, max: 0, criteria: "Cold, rushed, skips rapport." },
       ],
@@ -117,13 +122,14 @@ export const kickoffRubric: Rubric = {
       name: "Goal Alignment & Deep Why",
       maxScore: 15,
       description: "Go beyond functional goals to emotional/identity driver; build North Star.",
-      scoringCriteria: "Elite 15 | Strong 10 | Mid 5 | Fail 0. No North Star → max 10.",
+      scoringCriteria:
+        "Elite 15 | Strong 10 | Mid 5 | Fail 0. No North Star -> max 10. Elite needs why identified, stated back, client confirmed, named as North Star, and a concrete 30-day marker confirmed. Do not penalize late discovery when the call needed discovery first; score the quality of the work, not transcript position.",
       quickFixAction:
-        "Name the emotional why, build a North Star, and lock a 30-day metric the client confirms.",
+        "State the emotional why back to the client, name it as the North Star, and confirm a concrete 30-day marker they agree to.",
       discreteScores: [0, 5, 10, 15],
       bands: [
-        { name: "Elite", min: 15, max: 15, criteria: "Emotional drivers + North Star + 30-day metric + client confirms." },
-        { name: "Strong", min: 10, max: 10, criteria: "Goals understood but surface; North Star implied." },
+        { name: "Elite", min: 15, max: 15, criteria: "Emotional why identified, stated back, confirmed; clear North Star; 30-day marker confirmed." },
+        { name: "Strong", min: 10, max: 10, criteria: "Why exists but not fully stated back, confirmed, or locked to a 30-day marker. North Star implied." },
         { name: "Mid", min: 5, max: 5, criteria: "Repeats sales notes; physical only." },
         { name: "Fail", min: 0, max: 0, criteria: "No meaningful alignment." },
       ],
@@ -133,13 +139,14 @@ export const kickoffRubric: Rubric = {
       name: "Program Explanation (3 Phases)",
       maxScore: 10,
       description:
-        "Client understands 3-phase Halden Method structure (Retraining → Remodeling → Integrating or equivalents).",
-      scoringCriteria: "Elite 9–10 | Strong 6–8 | Mid 3–5 | Weak 1–2 | Fail 0.",
+        "Client understands 3-phase Halden Method structure (Retraining -> Remodeling -> Integrating or equivalents).",
+      scoringCriteria:
+        "Elite 9-10 | Strong 6-8 | Mid 3-5 | Weak 1-2 | Fail 0. Listing the three phase names is not Elite. Score explanation quality: what each phase does, expected outcome, analogy if useful, and the tie to this client's goal.",
       quickFixAction:
-        "Walk all three phases with outcomes, an analogy, and a tie back to their goals.",
+        "For each phase, say what it does, the expected outcome, and how it serves this client's specific goal.",
       bands: [
-        { name: "Elite", min: 9, max: 10, criteria: "All 3 phases + outcomes + analogy/cadence + tied to goals." },
-        { name: "Strong", min: 6, max: 8, criteria: "All 3 phases correct order; simpler delivery." },
+        { name: "Elite", min: 9, max: 10, criteria: "Each phase has a job, an outcome, analogy or cadence, and a tie to this client's goal. Not a name list." },
+        { name: "Strong", min: 6, max: 8, criteria: "All 3 phases in order; delivery is simple, generic, or missing outcomes/goal ties." },
         { name: "Mid", min: 3, max: 5, criteria: "Fragmented; 1–2 phases vague." },
         { name: "Weak", min: 1, max: 2, criteria: "Only vague 'phases/steps'." },
         { name: "Fail", min: 0, max: 0, criteria: "Skipped or misrepresented." },
@@ -155,7 +162,7 @@ export const kickoffRubric: Rubric = {
       quickFixAction:
         "Name the valleys ahead and separate good pain from bad pain so they are emotionally ready.",
       bands: [
-        { name: "Elite", min: 10, max: 10, criteria: "Milestones + explicit emotional friction + valleys (weeks 3–4) + good vs bad pain + first month foundational not transformational. Missing any → Strong 7." },
+        { name: "Elite", min: 10, max: 10, criteria: "Milestones + explicit emotional friction + valleys (weeks 3-4) + good vs bad pain + first month foundational not transformational. Missing any item is Strong 7." },
         { name: "Strong", min: 7, max: 7, criteria: "Basics covered; misses emotional prep." },
         { name: "Mid", min: 3, max: 3, criteria: "Vague expectations; instructional only." },
         { name: "Fail", min: 0, max: 0, criteria: "No expectation setting." },
@@ -186,7 +193,7 @@ export const kickoffRubric: Rubric = {
       quickFixAction:
         "Ask a behavioral and a self-awareness question, then change the plan from the answer.",
       bands: [
-        { name: "Elite", min: 10, max: 10, criteria: "Behavioral pattern + consistency trigger + learning style or push-vs-support; uses the answers to personalize. Asking 1–2 without adapting → Strong 7." },
+        { name: "Elite", min: 10, max: 10, criteria: "Behavioral pattern + consistency trigger + learning style or push-vs-support; uses the answers to personalize. Asking 1-2 without adapting is Strong 7." },
         { name: "Strong", min: 7, max: 7, criteria: "1–2 questions; lacks depth." },
         { name: "Mid", min: 3, max: 3, criteria: "Generic/logistical only." },
         { name: "Fail", min: 0, max: 0, criteria: "Skipped." },
@@ -196,14 +203,15 @@ export const kickoffRubric: Rubric = {
       id: "d9",
       name: "Next Steps & Diagnostics",
       maxScore: 10,
-      description: "Client knows exactly what to do and when (diagnostics → film → upload → program).",
-      scoringCriteria: "Elite 10 | Strong 7 | Mid 3 | Fail 0.",
+      description: "Client knows exactly what to do and when (diagnostics -> film -> upload -> program).",
+      scoringCriteria:
+        "Elite 10 | Strong 7 | Mid 3 | Fail 0. Elite: client understands what to do, how, where to submit, and by when, and the coach verifies understanding. Equivalent confirmation counts (restating the steps or deadline). Do not require a scripted repeat-back.",
       discreteScores: [0, 3, 7, 10],
       quickFixAction:
-        "Confirm the diagnostic → film → upload pipeline with a how-to and a timeline they repeat back.",
+        "Explain what the client needs to record, where it should be uploaded, and the deadline. Confirm that the client understands the sequence before ending the call.",
       bands: [
-        { name: "Elite", min: 10, max: 10, criteria: "Pipeline (diagnostics → film → upload → program) + filming how-to + demo or screen share + specific timeline + client confirms. No demo/screen share → Strong 7, not 10." },
-        { name: "Strong", min: 7, max: 7, criteria: "Clear instructions but no demo; minor confusion or slightly rushed timeline." },
+        { name: "Elite", min: 10, max: 10, criteria: "What + how + where to submit + by when + verified understanding (equivalent confirmation ok)." },
+        { name: "Strong", min: 7, max: 7, criteria: "Clear next steps and timeline, but how-to or verified understanding is thin." },
         { name: "Mid", min: 3, max: 3, criteria: "Vague instructions; unresolved doubts." },
         { name: "Fail", min: 0, max: 0, criteria: "No clear next steps." },
       ],

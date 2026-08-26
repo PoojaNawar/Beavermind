@@ -1,5 +1,11 @@
+"use client";
+
 import type { DimensionResult } from "@/lib/rubrics/types";
 import { FULL_MARKS_QUICK_FIX } from "@/lib/scoring/quickFix";
+import {
+  quickFixForDisplay,
+  sanitizeQuickFixTypography,
+} from "@/lib/ui/quickFixTypography";
 
 export type QuickFixView = {
   title: string;
@@ -9,10 +15,10 @@ export type QuickFixView = {
 };
 
 const GENERIC_ADVICE =
-  /^(communicate better|build rapport|be more empathetic|do better|try harder)\.?$/i;
+  /improve communication|build( more)? rapport|be more empathetic|do better|try harder|be a better listener/i;
 
 const PERSONAL_SHARE_RE =
-  /personal (stor(y|ies)|experience)|emotional connection|open up|relate to the client/i;
+  /personal (stor(y|ies)|experience)|emotional connection|open up|relate to the client|mirrors the client/i;
 
 const ANCHORED_RECAP_RE =
   /structured recap|emotional (reinforcement|anchor)|generic recap|\brecap\b/i;
@@ -53,20 +59,22 @@ function alreadyHasStructuredRecap(dim: DimensionResult): boolean {
 }
 
 function sourceText(dim: DimensionResult): string {
-  return dim.quickFix.trim();
+  return sanitizeQuickFixTypography(dim.quickFix);
 }
 
 function titleFromAction(text: string): string {
-  const cleaned = text
-    .trim()
+  const cleaned = quickFixForDisplay(text)
     .replace(/^[.-\s]+/, "")
     .replace(
       /^(incorporate|try to|make sure to|you should|the coach should)\s+/i,
       "",
     )
     .replace(/\.$/, "");
-  const first = cleaned.split(/,|\.\s+| then /i)[0]?.trim() ?? cleaned;
-  const words = first.split(/\s+/).slice(0, 8).join(" ");
+  if (/diagnostic.+film.+upload/i.test(cleaned)) {
+    return "Confirm the diagnostic → film → upload workflow";
+  }
+  const first = cleaned.split(/,\s+|\.\s+| then /i)[0]?.trim() ?? cleaned;
+  const words = first.split(/\s+/).slice(0, 10).join(" ");
   if (!words || GENERIC_ADVICE.test(words)) {
     return "Do this to reach full marks";
   }
@@ -74,7 +82,7 @@ function titleFromAction(text: string): string {
 }
 
 function polishActionOutcome(text: string): string {
-  const trimmed = text.trim().replace(/\s+/g, " ");
+  const trimmed = quickFixForDisplay(text).replace(/\s+/g, " ");
   if (!trimmed) return trimmed;
   const incorporate = trimmed.match(
     /^Incorporate (?:more |a more |an? )?(.+?) to (enhance|improve|strengthen) (.+)$/i,
@@ -85,6 +93,33 @@ function polishActionOutcome(text: string): string {
     return `${action.charAt(0).toUpperCase()}${action.slice(1)}, so it ${incorporate[2]!.toLowerCase()} ${outcome}.`;
   }
   return trimmed.endsWith(".") ? trimmed : `${trimmed}.`;
+}
+
+function kickoffGoalAlignmentFix(): QuickFixView {
+  return {
+    title: "Lock the North Star and 30-day marker",
+    body: "State the emotional why back to the client, name it as the North Star, and confirm a concrete 30-day marker they agree to.",
+    steps: null,
+    complete: false,
+  };
+}
+
+function kickoffProgramFix(): QuickFixView {
+  return {
+    title: "Tie each phase to an outcome and their goal",
+    body: "For each phase, say what it does, what changes for the client, and how it serves their specific goal. Use an analogy if it helps the path land.",
+    steps: null,
+    complete: false,
+  };
+}
+
+function kickoffNextStepsFix(): QuickFixView {
+  return {
+    title: "Confirm the diagnostic → film → upload workflow",
+    body: "Explain what the client needs to record, where it should be uploaded, and the deadline. Confirm that the client understands the sequence before ending the call.",
+    steps: null,
+    complete: false,
+  };
 }
 
 /**
@@ -116,7 +151,27 @@ export function presentQuickFix(
     return null;
   }
 
-  if (GENERIC_ADVICE.test(source)) {
+  if (callType === "kickoff" && dim.id === "d9") {
+    return kickoffNextStepsFix();
+  }
+
+  if (
+    callType === "kickoff" &&
+    dim.id === "d4" &&
+    /north star|emotional why|30-day|thirty.day|day thirty/i.test(source)
+  ) {
+    return kickoffGoalAlignmentFix();
+  }
+
+  if (
+    callType === "kickoff" &&
+    dim.id === "d5" &&
+    /phase|analogy|program explanation/i.test(source)
+  ) {
+    return kickoffProgramFix();
+  }
+
+  if (GENERIC_ADVICE.test(source) && source.split(/\s+/).length < 8) {
     return {
       title: titleFromAction(source),
       body: polishActionOutcome(source),

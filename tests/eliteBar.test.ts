@@ -5,29 +5,41 @@ import { applyCapsAndBuildResult } from "@/lib/scoring/calculate";
 import { hydrateCompletedReport } from "@/lib/scoring/hydrateReport";
 import {
   coachingHasCheckInElite,
+  kickoffHasDeepWhyElite,
   kickoffHasJourneyElite,
-  kickoffHasNextStepsDemo,
+  kickoffHasNextStepsConfirmation,
   kickoffHasNextStepsElite,
+  kickoffHasProgramElite,
+  kickoffHasRapportElite,
   nextEliteScore,
 } from "@/lib/scoring/eliteBar";
 import { getKickoffRubric } from "@/lib/rubrics/kickoff";
+import { getCoachingRubric } from "@/lib/rubrics/coaching";
+import { presentQuickFix } from "@/lib/ui/quickFixDisplay";
 import type { ModelEvaluationOutput } from "@/lib/validation/schemas";
+import type { DimensionResult } from "@/lib/rubrics/types";
 
 const kickoff01 = readFileSync(
   path.join(process.cwd(), "transcripts/kickoff-01.txt"),
   "utf8",
 );
+const coaching01 = readFileSync(
+  path.join(process.cwd(), "transcripts/coaching-01.txt"),
+  "utf8",
+);
 
-function stub(scores: Record<string, number | null>): ModelEvaluationOutput {
-  const rubric = getKickoffRubric();
+function stub(
+  rubric: ReturnType<typeof getKickoffRubric>,
+  scores: Record<string, number | null>,
+): ModelEvaluationOutput {
   return {
     oneThing: {
-      recommendation: "Add a filming demo.",
-      impact: "Client leaves with no filming confusion.",
+      recommendation: "Deepen one elite behaviour.",
+      impact: "The call lands.",
       estimatedPointsGained: 3,
-      scoreIfAppliedBasis: "D9 from 7 to 10",
+      scoreIfAppliedBasis: "dimension",
     },
-    brief: "Strong kick-off.",
+    brief: "Scored from the transcript.",
     redFlags: [],
     firedCapIds: [],
     notes: "",
@@ -47,28 +59,43 @@ function stub(scores: Record<string, number | null>): ModelEvaluationOutput {
   };
 }
 
-describe("kickoff elite bar (transcript-grounded)", () => {
-  it("does not treat kickoff-01 next steps as elite — there is no demo", () => {
-    expect(kickoffHasNextStepsDemo(kickoff01)).toBe(false);
-    expect(kickoffHasNextStepsElite(kickoff01)).toBe(false);
+describe("kickoff-01 quality bar (independent of a prior 87)", () => {
+  it("treats next-steps elite as understanding, not a required demo", () => {
+    expect(kickoffHasNextStepsConfirmation(kickoff01)).toBe(true);
+    expect(kickoffHasNextStepsElite(kickoff01)).toBe(true);
     expect(kickoffHasJourneyElite(kickoff01)).toBe(true);
+    expect(kickoffHasProgramElite(kickoff01)).toBe(true);
+    expect(kickoffHasDeepWhyElite(kickoff01)).toBe(true);
+    expect(kickoffHasRapportElite(kickoff01)).toBe(true);
   });
 
-  it("keeps journey and coaching-intel at 10 on kickoff-01", () => {
-    expect(nextEliteScore("kickoff", "d6", 10, kickoff01)).toBe(10);
-    expect(nextEliteScore("kickoff", "d8", 10, kickoff01)).toBe(10);
-  });
-
-  it("caps next-steps 10/10 to Strong 7 when there is no demo", () => {
-    expect(nextEliteScore("kickoff", "d9", 10, kickoff01)).toBe(7);
-  });
-
-  it("does not raise a Strong score", () => {
-    expect(nextEliteScore("kickoff", "d9", 7, kickoff01)).toBe(7);
+  it("does not raise a Strong rapport score", () => {
     expect(nextEliteScore("kickoff", "d2", 7, kickoff01)).toBe(7);
   });
 
-  it("applies the D9 cap when building a kickoff-01 result", () => {
+  it("does not cap kickoff-01 elite next-steps solely because there is no demo", () => {
+    expect(nextEliteScore("kickoff", "d9", 10, kickoff01)).toBe(10);
+  });
+
+  it("caps next-steps 10 when the client never confirms understanding", () => {
+    const thin =
+      "[Dana]: Film diagnostics and upload them.\n[Owen]: Okay.";
+    expect(nextEliteScore("kickoff", "d9", 10, thin)).toBe(7);
+  });
+
+  it("caps program 9-10 when only the three names are listed", () => {
+    const namesOnly =
+      "[Dana]: Retraining, Remodeling, Integrating. That's the method.\n[Owen]: Okay.";
+    expect(nextEliteScore("kickoff", "d5", 10, namesOnly)).toBe(8);
+  });
+
+  it("caps deep-why 15 when the why is never stated back or confirmed", () => {
+    const thin =
+      "[Dana]: So you want less pain.\n[Owen]: Yeah.\n[Dana]: Great, let's talk program.";
+    expect(nextEliteScore("kickoff", "d4", 15, thin)).toBe(10);
+  });
+
+  it("builds kickoff-01 totals from this transcript, not a stored 87", () => {
     const scores: Record<string, number | null> = {
       d1: 10,
       d2: 7,
@@ -84,19 +111,19 @@ describe("kickoff elite bar (transcript-grounded)", () => {
       d12: 5,
     };
     const result = applyCapsAndBuildResult({
-      model: stub(scores),
+      model: stub(getKickoffRubric(), scores),
       rubric: getKickoffRubric(),
       modelName: "test",
       transcript: kickoff01,
     });
-    expect(result.dimensions.find((d) => d.id === "d9")?.score).toBe(7);
     expect(result.dimensions.find((d) => d.id === "d2")?.score).toBe(7);
-    expect(result.overallScore).toBe(94);
+    expect(result.dimensions.find((d) => d.id === "d9")?.score).toBe(10);
+    expect(result.overallScore).toBe(97);
   });
 
-  it("repairs a stored 10/10 D9 on refresh without a re-run", () => {
-    const inflated = applyCapsAndBuildResult({
-      model: stub({
+  it("does not invent a D9 cap on refresh when understanding is already in the transcript", () => {
+    const stored = applyCapsAndBuildResult({
+      model: stub(getKickoffRubric(), {
         d1: 10,
         d2: 7,
         d3: 5,
@@ -113,19 +140,75 @@ describe("kickoff elite bar (transcript-grounded)", () => {
       rubric: getKickoffRubric(),
       modelName: "test",
     });
-    expect(inflated.dimensions.find((d) => d.id === "d9")?.score).toBe(10);
-    expect(inflated.overallScore).toBe(97);
-
-    const repaired = hydrateCompletedReport(inflated, kickoff01);
-    expect(repaired.dimensions.find((d) => d.id === "d9")?.score).toBe(7);
-    expect(repaired.overallScore).toBe(94);
+    const repaired = hydrateCompletedReport(stored, kickoff01);
+    expect(repaired.dimensions.find((d) => d.id === "d9")?.score).toBe(10);
+    expect(repaired.overallScore).toBe(97);
   });
 });
 
-describe("coaching elite bar", () => {
-  it("does not award check-in 10/10 for a surface hello", () => {
-    const thin = "[Coach]: Hey, how's it going?\n[Client]: Good.\n[Coach]: Let's look at the program.";
-    expect(coachingHasCheckInElite(thin)).toBe(false);
-    expect(nextEliteScore("coaching", "d1", 10, thin)).toBe(7);
+describe("coaching-01 quality bar", () => {
+  it("treats a real check-in as elite and a surface hello as Strong", () => {
+    expect(coachingHasCheckInElite(coaching01)).toBe(true);
+    expect(nextEliteScore("coaching", "d1", 10, coaching01)).toBe(10);
+    const hello =
+      "[Coach]: Hey, how's it going?\n[Client]: Good.\n[Coach]: Let's look at the program.";
+    expect(coachingHasCheckInElite(hello)).toBe(false);
+    expect(nextEliteScore("coaching", "d1", 10, hello)).toBe(7);
+  });
+});
+
+function dim(
+  overrides: Partial<DimensionResult> &
+    Pick<DimensionResult, "id" | "name" | "score" | "maxScore" | "quickFix">,
+): DimensionResult {
+  return {
+    disabled: false,
+    disabledReason: null,
+    notApplicable: false,
+    notApplicableReason: null,
+    band: null,
+    rationale: "Scored from the rubric bands.",
+    evidence: [],
+    notDemonstrated: false,
+    evidenceFound: false,
+    verifiedEvidenceCount: 0,
+    rejectedEvidenceCount: 0,
+    evidenceStrength: "low",
+    ...overrides,
+  };
+}
+
+describe("kickoff and coaching quick fixes", () => {
+  it("renders kickoff next-steps as a clean workflow, not a broken separator", () => {
+    const view = presentQuickFix(
+      dim({
+        id: "d9",
+        name: "Next Steps & Diagnostics",
+        score: 7,
+        maxScore: 10,
+        quickFix:
+          "Confirm the diagnostic !' film !' upload pipeline with a how-to and a timeline they repeat back.",
+      }),
+      "kickoff",
+    );
+    expect(view?.title).toBe("Confirm the diagnostic → film → upload workflow");
+    expect(view?.title).not.toMatch(/!'/);
+    expect(view?.body).toMatch(/what the client needs to record/i);
+    expect(view?.body).toMatch(/understands the sequence/i);
+  });
+
+  it("renders a coaching check-in personal-share gap as a specific connection action", () => {
+    const view = presentQuickFix(
+      dim({
+        id: "d1",
+        name: "Check-In & Connection",
+        score: 7,
+        maxScore: 10,
+        quickFix: "Share a personal story.",
+      }),
+      "coaching",
+    );
+    expect(view?.title).toBe("Deepen the personal connection");
+    expect(view?.body).toMatch(/mirrors the client's situation/i);
   });
 });

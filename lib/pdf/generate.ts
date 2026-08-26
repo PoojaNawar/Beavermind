@@ -4,6 +4,7 @@ import { dimensionEvidenceUi } from "@/lib/transcripts/evidenceQuality";
 import { hydrateCompletedReport } from "@/lib/scoring/hydrateReport";
 import { scoredRationale } from "@/lib/ui/scoreTone";
 import { presentQuickFix } from "@/lib/ui/quickFixDisplay";
+import { quickFixForPdf } from "@/lib/ui/quickFixTypography";
 
 function callTypeLabel(callType: string): string {
   return callType === "kickoff" ? "Kick-off Call" : "Coaching Call";
@@ -272,10 +273,10 @@ export async function buildEvaluationPdf(
           .fillColor(ink)
           .font("Helvetica-Bold")
           .fontSize(10)
-          .text(quickFix.title);
+          .text(quickFixForPdf(quickFix.title));
         if (quickFix.body) {
           doc.moveDown(0.12);
-          body(quickFix.body);
+          body(quickFixForPdf(quickFix.body));
         } else {
           doc.moveDown(0.35);
         }
@@ -285,7 +286,7 @@ export async function buildEvaluationPdf(
               .fillColor(ink)
               .font("Helvetica")
               .fontSize(10)
-              .text(`•  ${step}`, { indent: 12, lineGap: 1 });
+              .text(`•  ${quickFixForPdf(step)}`, { indent: 12, lineGap: 1 });
           }
           doc.moveDown(0.35);
         }

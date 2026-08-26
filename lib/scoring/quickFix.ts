@@ -3,6 +3,10 @@ import type {
   Rubric,
   RubricDimension,
 } from "@/lib/rubrics/types";
+import { sanitizeQuickFixTypography } from "@/lib/ui/quickFixTypography";
+
+const GENERIC_QUICK_FIX =
+  /^(improve communication|build( more)? rapport|be more empathetic|do better|try harder|be a better listener|improve your coaching)\.?$/i;
 
 export const FULL_MARKS_QUICK_FIX = "Full marks were reached.";
 
@@ -30,10 +34,14 @@ export function isUnusableQuickFix(
   const trimmed = text.trim();
   if (trimmed.length < 12) return true;
 
-  const normalized = trimmed.toLowerCase().replace(/\s+/g, " ");
+  const cleaned = sanitizeQuickFixTypography(trimmed);
+  const normalized = cleaned.toLowerCase().replace(/\s+/g, " ");
+  if (GENERIC_QUICK_FIX.test(normalized)) {
+    return true;
+  }
   if (
     /^(n\/?a|none|none needed|not applicable|null|undefined|-)$/i.test(
-      trimmed,
+      cleaned,
     )
   ) {
     return true;
@@ -81,7 +89,7 @@ export function resolveQuickFix(args: {
   }
 
   if (!isUnusableQuickFix(args.quickFix, args.dimension)) {
-    return args.quickFix.trim();
+    return sanitizeQuickFixTypography(args.quickFix);
   }
 
   return fallbackQuickFix(args.dimension);

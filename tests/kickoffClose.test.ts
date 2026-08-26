@@ -94,9 +94,7 @@ describe("kickoff close calibration", () => {
       transcript: kickoff01,
     });
     expect(result.dimensions.find((d) => d.id === "d11")?.score).toBe(5);
-    // kickoff-01 has no screen-share demo — D9 elite is 7, not 10.
-    expect(result.dimensions.find((d) => d.id === "d9")?.score).toBe(7);
-    expect(result.overallScore).toBe(93);
+    expect(result.overallScore).toBe(96);
   });
 
   it("caps D11 at 3 when the transcript has no recap", () => {

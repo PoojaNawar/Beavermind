@@ -202,4 +202,54 @@ describe("presentQuickFix", () => {
       ),
     ).toBeNull();
   });
+
+  it("repairs a malformed next-steps arrow and uses workflow copy", () => {
+    const view = presentQuickFix(
+      dim({
+        id: "d9",
+        name: "Next Steps & Diagnostics",
+        score: 7,
+        maxScore: 10,
+        quickFix:
+          "Confirm the diagnostic !' film !' upload pipeline with a how-to and a timeline they repeat back.",
+      }),
+      "kickoff",
+    );
+    expect(view?.title).toBe("Confirm the diagnostic → film → upload workflow");
+    expect(`${view?.title} ${view?.body}`).not.toMatch(/!'|â†/);
+    expect(view?.body).toMatch(/where it should be uploaded/i);
+  });
+
+  it("makes goal-alignment advice specific, not a late-why penalty", () => {
+    const view = presentQuickFix(
+      dim({
+        id: "d4",
+        name: "Goal Alignment & Deep Why",
+        score: 10,
+        maxScore: 15,
+        quickFix:
+          "Name the emotional why, build a North Star, and lock a 30-day metric the client confirms.",
+      }),
+      "kickoff",
+    );
+    expect(view?.title).toBe("Lock the North Star and 30-day marker");
+    expect(view?.body).toMatch(/state the emotional why back/i);
+    expect(view?.body).toMatch(/30-day marker/i);
+  });
+
+  it("makes program-explanation advice about quality, not naming phases", () => {
+    const view = presentQuickFix(
+      dim({
+        id: "d5",
+        name: "Program Explanation (3 Phases)",
+        score: 9,
+        maxScore: 10,
+        quickFix: "Walk all three phases with outcomes, an analogy, and a tie back to their goals.",
+      }),
+      "kickoff",
+    );
+    expect(view?.title).toMatch(/outcome and their goal/i);
+    expect(view?.body).toMatch(/what it does/i);
+    expect(view?.body).not.toMatch(/^name the three phases/i);
+  });
 });
