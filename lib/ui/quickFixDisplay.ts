@@ -1,5 +1,3 @@
-"use client";
-
 import type { DimensionResult } from "@/lib/rubrics/types";
 import {
   FULL_MARKS_QUICK_FIX,

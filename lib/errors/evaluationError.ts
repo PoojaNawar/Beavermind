@@ -63,6 +63,12 @@ export function classifyEvaluationError(err: unknown): EvaluationErrorCode {
 }
 
 export function publicErrorMessage(err: unknown): string {
+  const raw = rawMessage(err);
+
+  if (/winansi|cannot encode|pdfkit|Helvetica/i.test(raw)) {
+    return "PDF could not be generated because the report contains characters the PDF engine cannot encode. Please retry.";
+  }
+
   switch (classifyEvaluationError(err)) {
     case "rate_limited":
       return "Evaluation could not be completed because the AI service was busy. Please retry in a moment.";

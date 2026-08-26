@@ -33,7 +33,15 @@ export async function buildEvaluationPdf(
     transcript?: string | null;
   },
 ): Promise<Buffer> {
-  result = hydrateCompletedReport(result, meta.transcript);
+  try {
+    result = hydrateCompletedReport(result, meta.transcript);
+  } catch (err) {
+    console.warn(
+      `[pdf] hydrateCompletedReport failed; using stored result: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+  }
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       margin: 50,

@@ -15,18 +15,28 @@ function toneColor(tone: PillarSummary["tone"]): string {
   }
 }
 
-export function PillarStrip({ pillars }: { pillars: PillarSummary[] }) {
+export function PillarStrip({
+  pillars,
+  showHeading = true,
+}: {
+  pillars: PillarSummary[];
+  showHeading?: boolean;
+}) {
   if (pillars.length === 0) return null;
 
   return (
-    <section>
-      <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-        Pillars
-      </h2>
-      <p className="mt-1 text-sm text-[var(--muted)]">
-        Connection · Confidence · Continuity
-      </p>
-      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+    <div>
+      {showHeading ? (
+        <>
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+            Pillars
+          </h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Connection · Confidence · Continuity
+          </p>
+        </>
+      ) : null}
+      <div className={`grid gap-4 sm:grid-cols-3 ${showHeading ? "mt-4" : ""}`}>
         {pillars.map((pillar) => {
           const pct =
             pillar.ratio === null ? 0 : Math.round(pillar.ratio * 100);
@@ -45,7 +55,7 @@ export function PillarStrip({ pillars }: { pillars: PillarSummary[] }) {
               </div>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--bg-deep)]">
                 <div
-                  className="h-full rounded-full transition-[width]"
+                  className="h-full rounded-full"
                   style={{
                     width: `${pct}%`,
                     background: toneColor(pillar.tone),
@@ -70,6 +80,6 @@ export function PillarStrip({ pillars }: { pillars: PillarSummary[] }) {
           );
         })}
       </div>
-    </section>
+    </div>
   );
 }
