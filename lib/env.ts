@@ -61,4 +61,10 @@ export const env = {
       first("CHUNK_AT", "SINGLE_PASS_TRANSCRIPT_CHARS") ??
         DEFAULT_SINGLE_PASS_CHARS,
     ),
+  /**
+   * History lists only evaluations created at or after this ISO time.
+   * Older rows stay in the database but are hidden so the board starts clean.
+   */
+  historyStartedAt: () =>
+    first("HISTORY_STARTED_AT") ?? "2026-08-26T06:16:00.000Z",
 };

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Inter } from "next/font/google";
+import { AppNav } from "@/components/AppNav";
 import "./globals.css";
 
 const sans = Inter({
@@ -34,12 +35,7 @@ export default function RootLayout({
                   BeaverMind
                 </span>
               </Link>
-              <Link
-                href="/#history"
-                className="text-sm font-medium text-[var(--muted)] hover:text-[var(--ink)]"
-              >
-                History
-              </Link>
+              <AppNav />
             </div>
           </header>
           <main className="mx-auto max-w-[1180px] px-5 py-10 sm:py-14">{children}</main>

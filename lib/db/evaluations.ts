@@ -23,6 +23,7 @@ import {
   type PipelineCheckpoint,
 } from "@/lib/pipeline/checkpoint";
 import { hydrateCompletedReport } from "@/lib/scoring/hydrateReport";
+import { isInHistoryWindow } from "@/lib/ui/history";
 
 export interface EvaluationRow {
   id: string;
@@ -208,14 +209,16 @@ export function toHistoryItem(row: {
   };
 }
 
-/** Recent evaluations for the home history list. Never selects transcript or result. */
+/** Recent evaluations for History. Never selects transcript or result. */
 export async function listEvaluations(
   limit = 40,
 ): Promise<EvaluationHistoryItem[]> {
   const supabase = getSupabaseAdmin();
+  const since = env.historyStartedAt();
   const primary = await supabase
     .from("evaluations")
     .select(HISTORY_COLUMNS)
+    .gte("created_at", since)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -227,6 +230,7 @@ export async function listEvaluations(
     const retry = await supabase
       .from("evaluations")
       .select("id, call_type, status, created_at")
+      .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(limit);
     rows = retry.data as Array<Parameters<typeof toHistoryItem>[0]> | null;
@@ -237,7 +241,9 @@ export async function listEvaluations(
     throw new Error(`Database error listing evaluations: ${error.message}`);
   }
 
-  return (rows ?? []).map(toHistoryItem);
+  return (rows ?? [])
+    .map(toHistoryItem)
+    .filter((item) => isInHistoryWindow(item.createdAt, since));
 }
 
 /** Polling payload: never include the full transcript or resume checkpoints. */
