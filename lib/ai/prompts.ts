@@ -16,7 +16,8 @@ CRITICAL ANTI-HALLUCINATION RULES:
 9. Red flags are independent of overall score — a high score can still have red flags.
 10. For "The One Thing", estimate points gained only when the rubric makes that defensible; otherwise set estimatedPointsGained to null and explain in scoreIfAppliedBasis.
 11. quickFix is what the coach had to do on THIS dimension to reach full marks — one unique sentence. Below full marks, name the missing elite behaviour for that dimension only. Do not repeat the same sentence across dimensions, paste scoring shorthand, or invent extra questions. At full marks, N/A, or disabled: set quickFix to "".
-12. Pattern notes such as "most coaches score 3 here" are calibration, not this call's score. If this transcript shows the elite behaviours, give the elite score. Never recommend a behaviour that is already demonstrated in verified quotes.
+12. Elite (10/10, 15/15, 5/5) requires EVERY listed elite criterion to be evidenced in THIS transcript, and that it landed when the rubric asks for client confirmation. Mentioning the topic, being generally strong, or hitting most of the list is Strong — never 10/10. Pattern notes ("most coaches miss recap") are not this call's score: do not default to them, and do not default to full marks either.
+13. Never recommend a behaviour that is already demonstrated in verified quotes.
 
 OUTPUT:
 Return structured JSON matching the schema. Include all 12 dimensions.

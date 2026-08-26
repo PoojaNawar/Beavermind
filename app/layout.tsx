@@ -34,6 +34,12 @@ export default function RootLayout({
                   BeaverMind
                 </span>
               </Link>
+              <Link
+                href="/#history"
+                className="text-sm font-medium text-[var(--muted)] hover:text-[var(--ink)]"
+              >
+                History
+              </Link>
             </div>
           </header>
           <main className="mx-auto max-w-[1180px] px-5 py-10 sm:py-14">{children}</main>

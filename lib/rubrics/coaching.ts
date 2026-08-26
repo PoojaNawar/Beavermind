@@ -15,6 +15,7 @@ export const coachingRubric: Rubric = {
     "D10 not booked live → hard 0, non-recoverable.",
     "If no struggle present → D8 scores 5 by default.",
     "If no adjustments needed → D5 scores 7 by default.",
+    "Elite / 10/10 only when every elite criterion for that dimension is evidenced. Partial coverage is Strong, not Elite.",
   ],
   gradeBands: [
     { band: "Elite", min: 90, max: 100, description: "Client feels seen, challenged, connected to future self." },

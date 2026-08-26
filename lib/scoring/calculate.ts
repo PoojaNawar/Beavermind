@@ -17,6 +17,7 @@ import {
   kickoffHasEliteClose,
   kickoffHasStructuredRecap,
 } from "@/lib/scoring/kickoffClose";
+import { nextEliteScore } from "@/lib/scoring/eliteBar";
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
@@ -140,6 +141,12 @@ export function applyCapsAndBuildResult(args: {
       } else if (transcript && !kickoffHasStructuredRecap(transcript) && d11.score > 3) {
         d11.score = 3;
       }
+    }
+  }
+
+  if (transcript) {
+    for (const d of working) {
+      d.score = nextEliteScore(rubric.id, d.id, d.score, transcript);
     }
   }
 

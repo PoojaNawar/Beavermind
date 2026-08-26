@@ -178,6 +178,68 @@ export async function getEvaluation(
   return rowToRecord(data as EvaluationRow);
 }
 
+export interface EvaluationHistoryItem {
+  id: string;
+  callType: CallType;
+  clientName: string | null;
+  coachName: string | null;
+  status: EvaluationStatus;
+  createdAt: string;
+}
+
+const HISTORY_COLUMNS =
+  "id, call_type, client_name, coach_name, status, created_at";
+
+export function toHistoryItem(row: {
+  id: string;
+  call_type: CallType;
+  client_name?: string | null;
+  coach_name?: string | null;
+  status: EvaluationStatus;
+  created_at: string;
+}): EvaluationHistoryItem {
+  return {
+    id: row.id,
+    callType: row.call_type,
+    clientName: row.client_name ?? null,
+    coachName: row.coach_name ?? null,
+    status: row.status,
+    createdAt: row.created_at,
+  };
+}
+
+/** Recent evaluations for the home history list. Never selects transcript or result. */
+export async function listEvaluations(
+  limit = 40,
+): Promise<EvaluationHistoryItem[]> {
+  const supabase = getSupabaseAdmin();
+  const primary = await supabase
+    .from("evaluations")
+    .select(HISTORY_COLUMNS)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  let rows: Array<Parameters<typeof toHistoryItem>[0]> | null =
+    primary.data as Array<Parameters<typeof toHistoryItem>[0]> | null;
+  let { error } = primary;
+
+  if (error && /client_name|coach_name|schema cache/i.test(error.message)) {
+    const retry = await supabase
+      .from("evaluations")
+      .select("id, call_type, status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    rows = retry.data as Array<Parameters<typeof toHistoryItem>[0]> | null;
+    error = retry.error;
+  }
+
+  if (error) {
+    throw new Error(`Database error listing evaluations: ${error.message}`);
+  }
+
+  return (rows ?? []).map(toHistoryItem);
+}
+
 /** Polling payload: never include the full transcript or resume checkpoints. */
 export function toClientEvaluation(record: EvaluationRecord) {
   const { transcript: _transcript, result, ...rest } = record;

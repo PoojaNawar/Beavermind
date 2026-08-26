@@ -94,7 +94,9 @@ describe("kickoff close calibration", () => {
       transcript: kickoff01,
     });
     expect(result.dimensions.find((d) => d.id === "d11")?.score).toBe(5);
-    expect(result.overallScore).toBe(96);
+    // kickoff-01 has no screen-share demo — D9 elite is 7, not 10.
+    expect(result.dimensions.find((d) => d.id === "d9")?.score).toBe(7);
+    expect(result.overallScore).toBe(93);
   });
 
   it("caps D11 at 3 when the transcript has no recap", () => {
@@ -106,7 +108,8 @@ describe("kickoff close calibration", () => {
       transcript: thin,
     });
     expect(result.dimensions.find((d) => d.id === "d11")?.score).toBe(3);
-    expect(result.overallScore).toBe(94);
+    expect(result.dimensions.find((d) => d.id === "d6")?.score).toBe(7);
+    expect(result.dimensions.find((d) => d.id === "d9")?.score).toBe(7);
   });
 
   it("repairs a stored 94 result when the transcript has the elite close", () => {

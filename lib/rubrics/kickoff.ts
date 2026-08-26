@@ -12,6 +12,7 @@ export const kickoffRubric: Rubric = {
     "Within a band, any integer works (or a half step where max ≤ 5).",
     "Every score grounded in direct transcript evidence — never assumptions or mood.",
     "Quote-first rationale. If behaviour not verifiable, score lower tier of the correct band — do not collapse bands.",
+    "Elite / 10/10 only when every elite criterion for that dimension is evidenced. Partial coverage is Strong, not Elite.",
     "D7 and D12 score what is communicated in-call, not post-call delivery.",
   ],
   gradeBands: [
@@ -154,7 +155,7 @@ export const kickoffRubric: Rubric = {
       quickFixAction:
         "Name the valleys ahead and separate good pain from bad pain so they are emotionally ready.",
       bands: [
-        { name: "Elite", min: 10, max: 10, criteria: "Milestones + emotional friction + valleys + good vs bad pain." },
+        { name: "Elite", min: 10, max: 10, criteria: "Milestones + explicit emotional friction + valleys (weeks 3–4) + good vs bad pain + first month foundational not transformational. Missing any → Strong 7." },
         { name: "Strong", min: 7, max: 7, criteria: "Basics covered; misses emotional prep." },
         { name: "Mid", min: 3, max: 3, criteria: "Vague expectations; instructional only." },
         { name: "Fail", min: 0, max: 0, criteria: "No expectation setting." },
@@ -185,7 +186,7 @@ export const kickoffRubric: Rubric = {
       quickFixAction:
         "Ask a behavioral and a self-awareness question, then change the plan from the answer.",
       bands: [
-        { name: "Elite", min: 10, max: 10, criteria: "Behavioral + self-awareness questions; personalizes approach." },
+        { name: "Elite", min: 10, max: 10, criteria: "Behavioral pattern + consistency trigger + learning style or push-vs-support; uses the answers to personalize. Asking 1–2 without adapting → Strong 7." },
         { name: "Strong", min: 7, max: 7, criteria: "1–2 questions; lacks depth." },
         { name: "Mid", min: 3, max: 3, criteria: "Generic/logistical only." },
         { name: "Fail", min: 0, max: 0, criteria: "Skipped." },
@@ -201,8 +202,8 @@ export const kickoffRubric: Rubric = {
       quickFixAction:
         "Confirm the diagnostic → film → upload pipeline with a how-to and a timeline they repeat back.",
       bands: [
-        { name: "Elite", min: 10, max: 10, criteria: "Clear pipeline + filming how-to + timeline + client confirms." },
-        { name: "Strong", min: 7, max: 7, criteria: "Clear but minor confusion / no demo." },
+        { name: "Elite", min: 10, max: 10, criteria: "Pipeline (diagnostics → film → upload → program) + filming how-to + demo or screen share + specific timeline + client confirms. No demo/screen share → Strong 7, not 10." },
+        { name: "Strong", min: 7, max: 7, criteria: "Clear instructions but no demo; minor confusion or slightly rushed timeline." },
         { name: "Mid", min: 3, max: 3, criteria: "Vague instructions; unresolved doubts." },
         { name: "Fail", min: 0, max: 0, criteria: "No clear next steps." },
       ],

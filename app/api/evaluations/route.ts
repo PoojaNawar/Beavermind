@@ -3,7 +3,7 @@ import { after } from "next/server";
 import { createEvaluationBodySchema } from "@/lib/validation/schemas";
 import { validateTranscriptLength } from "@/lib/transcripts/handling";
 import { getRubric, isCallType } from "@/lib/rubrics";
-import { createEvaluation } from "@/lib/db/evaluations";
+import { createEvaluation, listEvaluations } from "@/lib/db/evaluations";
 import { processEvaluation } from "@/lib/pipeline/processEvaluation";
 import {
   publicErrorMessage,
@@ -31,6 +31,16 @@ function parseJsonBody(rawBody: string): unknown {
     throw new Error(
       "Invalid JSON body. Ensure the transcript is sent as a JSON string field.",
     );
+  }
+}
+
+export async function GET() {
+  try {
+    const evaluations = await listEvaluations();
+    return NextResponse.json({ evaluations });
+  } catch (err) {
+    console.warn(`[evaluations GET] ${sanitizeDiagnostic(err)}`);
+    return NextResponse.json({ error: publicErrorMessage(err) }, { status: 500 });
   }
 }
 
