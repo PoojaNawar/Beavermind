@@ -68,4 +68,13 @@ describe("deterministic cap detection", () => {
       "next-call-not-booked",
     );
   });
+
+  it("fires next-call-not-booked whenever live booking is absent", () => {
+    const silentClose =
+      "Great session today. Talk soon and keep posting in the community.";
+    expect(hasLiveNextCallBooking(silentClose)).toBe(false);
+    expect(detectDeterministicCapIds("coaching", silentClose)).toContain(
+      "next-call-not-booked",
+    );
+  });
 });

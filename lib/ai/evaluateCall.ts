@@ -126,7 +126,7 @@ function prepareVerifiedModel(args: {
   };
 
   const reconciled =
-    reconcileModelOutputAfterVerification(withVerifiedEvidence);
+    reconcileModelOutputAfterVerification(withVerifiedEvidence, args.rubric);
 
   reconciled.firedCapIds = resolveFiredCapIds({
     callType: args.rubric.id,

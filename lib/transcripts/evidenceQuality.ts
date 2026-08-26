@@ -7,6 +7,7 @@ import type {
   EvidenceStrength,
   EvidenceVerificationStatus,
 } from "@/lib/rubrics/types";
+import { applyReportPresentation } from "@/lib/ui/reportPresentation";
 import {
   isNotDemonstratedPlaceholder,
   quoteExistsInTranscript,
@@ -117,10 +118,10 @@ export function normalizeStoredEvidence(item: {
 }
 
 /**
- * WHY strength cannot affect scoring:
- * It measures verification completeness, not rubric performance. A high score
- * with unverified quotes stays the model's rubric score; a low-strength flag
- * is an audit signal, not a penalty.
+ * WHY strength cannot affect scoring bands on its own:
+ * Strength measures verification completeness. Elite still requires verified
+ * support when quotes were proposed — see evidencePolicy caps — but missing
+ * quotes alone do not invent a Fail.
  */
 export function evidenceStrengthFromVerifiedCount(
   verifiedCount: number,
@@ -192,6 +193,7 @@ export interface DimensionEvidenceUi {
  * NOT DEMONSTRATED.
  */
 export function dimensionEvidenceUi(dim: {
+  id?: string;
   notDemonstrated: boolean;
   verifiedEvidenceCount: number;
   rejectedEvidenceCount: number;
@@ -201,9 +203,15 @@ export function dimensionEvidenceUi(dim: {
   if (dim.disabled || dim.notApplicable) {
     return {
       state: "not_demonstrated",
-      label: dim.disabled ? "Disabled" : "Not applicable",
+      label: "Not applicable",
       tone: "neutral",
-      explanation: null,
+      explanation: dim.disabled
+        ? dim.id === "d4"
+          ? "Movement coaching did not occur on this call, so this dimension was not scored."
+          : "This dimension did not apply to the current call, so it was not scored."
+        : dim.id === "d2"
+          ? "Diagnostics review did not occur in this cycle, so this dimension was not scored."
+          : "This dimension did not apply to the current call, so it was not scored.",
     };
   }
 
@@ -276,9 +284,10 @@ export function hydrateDimensionEvidence(dim: DimensionResult): DimensionResult 
 
 export function hydrateEvaluationResult(result: EvaluationResult): EvaluationResult {
   const dimensions = result.dimensions.map(hydrateDimensionEvidence);
-  return {
+  const hydrated = {
     ...result,
     dimensions,
     evidenceQuality: result.evidenceQuality ?? summarizeReportEvidence(dimensions),
   };
+  return applyReportPresentation(hydrated);
 }

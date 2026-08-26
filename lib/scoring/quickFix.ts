@@ -10,6 +10,22 @@ const GENERIC_QUICK_FIX =
 
 export const FULL_MARKS_QUICK_FIX = "Full marks were reached.";
 
+const TRAILING_FRAGMENT =
+  /\b(and|with|the|a|an|to|for|of|or|that|this|as|by|from|but|if|when|while|then)\s*$/i;
+
+/**
+ * Model output that was cut off mid-sentence must never reach the report.
+ */
+export function isIncompleteQuickFix(text: string): boolean {
+  const cleaned = sanitizeQuickFixTypography(text).trim();
+  if (!cleaned) return true;
+  if (/[!']{2,}|\s!['’]/.test(text)) return true;
+  if (/,\s*$/.test(cleaned) || /:\s*$/.test(cleaned)) return true;
+  const stripped = cleaned.replace(/["')\]]+$/, "");
+  if (TRAILING_FRAGMENT.test(stripped)) return true;
+  return false;
+}
+
 /**
  * Coach-facing quick fix. Never changes the dimension score.
  *
@@ -35,6 +51,7 @@ export function isUnusableQuickFix(
   if (trimmed.length < 12) return true;
 
   const cleaned = sanitizeQuickFixTypography(trimmed);
+  if (isIncompleteQuickFix(cleaned)) return true;
   const normalized = cleaned.toLowerCase().replace(/\s+/g, " ");
   if (GENERIC_QUICK_FIX.test(normalized)) {
     return true;

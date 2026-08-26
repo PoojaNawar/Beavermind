@@ -252,4 +252,61 @@ describe("presentQuickFix", () => {
     expect(view?.body).toMatch(/what it does/i);
     expect(view?.body).not.toMatch(/^name the three phases/i);
   });
+
+  it("makes coaching accountability and booking advice specific", () => {
+    const accountability = presentQuickFix(
+      dim({
+        id: "d6",
+        name: "Action Steps & Accountability",
+        score: 10,
+        maxScore: 15,
+        quickFix: "Leave with coach and client commitments that have owners and",
+      }),
+      "coaching",
+    );
+    expect(accountability?.title).toMatch(/owned and time-bound/i);
+    expect(accountability?.body).toMatch(/deadline/i);
+    expect(accountability?.body).not.toMatch(/owners and$/i);
+
+    const booking = presentQuickFix(
+      dim({
+        id: "d10",
+        name: "Next Call Booking",
+        score: 0,
+        maxScore: 5,
+        quickFix: "Book the next call live and confirm the date out loud.",
+      }),
+      "coaching",
+    );
+    expect(booking?.title).toMatch(/before ending the session/i);
+    expect(booking?.body).toMatch(/calendar invite/i);
+  });
+
+  it("does not treat unverified vision quotes as established fact", () => {
+    const view = presentQuickFix(
+      dim({
+        id: "d3",
+        name: "Program Focus + Vision",
+        score: 10,
+        maxScore: 15,
+        quickFix: "The client clearly stated their 12-month vision.",
+        rationale: "The client clearly stated their 12-month vision.",
+        evidence: [
+          {
+            quote: "I will be competing at CrossFit Games by December.",
+            speaker: "Client",
+            location: null,
+            demonstrated: false,
+            verificationStatus: "unverified",
+          },
+        ],
+        verifiedEvidenceCount: 0,
+        rejectedEvidenceCount: 1,
+        evidenceFound: true,
+      }),
+      "coaching",
+    );
+    expect(view?.body).toMatch(/does not provide sufficient verified evidence/i);
+    expect(view?.body).not.toMatch(/the client clearly stated/i);
+  });
 });

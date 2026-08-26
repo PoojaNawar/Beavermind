@@ -1,17 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { DimensionResult, EvidenceItem } from "@/lib/rubrics/types";
+import type { DimensionResult, EvaluationResult, EvidenceItem } from "@/lib/rubrics/types";
 import {
   dimensionEvidenceUi,
   isUnverifiedEvidence,
   isVerifiedEvidence,
 } from "@/lib/transcripts/evidenceQuality";
 import {
+  dimensionImpact,
+  evidenceItemLabel,
+  impactLabel,
+  notApplicableCopy,
+  scoreExplanation,
+} from "@/lib/ui/reportPresentation";
+import {
   dimensionTone,
-  isHighWeightDimension,
   scorePillClass,
-  scoredRationale,
   toneFill,
 } from "@/lib/ui/scoreTone";
 import { presentQuickFix } from "@/lib/ui/quickFixDisplay";
@@ -27,19 +32,23 @@ function QuickFixBlock({
   if (!quickFix) return null;
 
   return (
-    <section className="mt-5 rounded-xl border border-[var(--line)] bg-[var(--card)] px-4 py-3">
+    <section className="mt-6">
       <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
         Quick fix
       </h4>
       <p
-        className={`mt-1.5 text-sm font-semibold tracking-tight ${
-          quickFix.complete ? "text-[var(--muted)]" : "text-[var(--ink)]"
+        className={`mt-2 text-sm font-semibold tracking-tight ${
+          quickFix.complete
+            ? "text-[var(--muted)]"
+            : "uppercase tracking-[0.04em] text-[var(--ink)]"
         }`}
       >
-        {quickFix.title}
+        {quickFix.complete
+          ? "Full marks reached"
+          : quickFix.title}
       </p>
       {quickFix.body ? (
-        <p className="mt-1.5 text-sm leading-relaxed text-[var(--ink)]">
+        <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-[var(--ink)]">
           {quickFix.body}
         </p>
       ) : null}
@@ -54,22 +63,42 @@ function QuickFixBlock({
   );
 }
 
-function evidenceItemLabel(ev: EvidenceItem): string {
-  if (ev.verificationStatus === "verified") return "Verified";
-  if (ev.verificationStatus === "unverified") return "Unverified";
-  return "Not demonstrated";
-}
+function EvidenceRow({
+  ev,
+  kind,
+}: {
+  ev: EvidenceItem;
+  kind: "verified" | "unverified" | "not_demonstrated";
+}) {
+  const meta = evidenceItemLabel(kind);
+  const muted = kind !== "verified";
 
-function Star() {
   return (
-    <svg
-      viewBox="0 0 16 16"
-      className="h-3.5 w-3.5 text-[var(--gold)]"
-      fill="currentColor"
-      aria-label="High-weight dimension"
-    >
-      <path d="M8 1.15 9.76 5.3l4.54.5-3.4 2.95.95 4.47L8 11.2l-3.85 2.02.95-4.47-3.4-2.95 4.54-.5L8 1.15Z" />
-    </svg>
+    <li className="max-w-prose text-[14px] leading-relaxed">
+      <p
+        className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${
+          kind === "verified"
+            ? "text-[var(--ink)]"
+            : kind === "unverified"
+              ? "text-[#8a6a12]"
+              : "text-[var(--muted)]"
+        }`}
+      >
+        {meta.mark} {meta.label}
+      </p>
+      {kind === "not_demonstrated" ? (
+        <p className="mt-1 text-[var(--muted)]">{ev.quote}</p>
+      ) : (
+        <p className={`mt-1 ${muted ? "text-[#8a6a12]" : "text-[var(--ink)]"}`}>
+          {ev.speaker ? `${ev.speaker}: ` : ""}
+          “{ev.quote}”
+        </p>
+      )}
+      <p className="mt-0.5 text-xs text-[var(--muted)]">
+        {meta.hint}
+        {ev.location ? ` · ${ev.location}` : ""}
+      </p>
+    </li>
   );
 }
 
@@ -132,9 +161,11 @@ function DimensionRail({
 export function DimensionAccordion({
   dimensions,
   callType,
+  firedResult,
 }: {
   dimensions: DimensionResult[];
   callType: string;
+  firedResult: EvaluationResult;
 }) {
   const [activeId, setActiveId] = useState<string | null>(
     dimensions[0]?.id ?? null,
@@ -171,14 +202,14 @@ export function DimensionAccordion({
 
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_3rem] lg:gap-6">
-      <div className="space-y-8">
+      <div className="space-y-10">
         {dimensions.map((dim, index) => {
-          const scoreLabel = dim.disabled
-            ? "Off"
-            : dim.notApplicable
-              ? "N/A"
-              : `${dim.score}/${dim.maxScore}`;
+          const na = notApplicableCopy(dim);
+          const scoreLabel = na
+            ? "Not applicable"
+            : `${dim.score}/${dim.maxScore}`;
           const evidenceUi = dimensionEvidenceUi(dim);
+          const impact = dimensionImpact(dim, firedResult);
           const verifiedItems = dim.evidence.filter(isVerifiedEvidence);
           const unverifiedItems = dim.evidence.filter(isUnverifiedEvidence);
           const ndItems = dim.evidence.filter(
@@ -191,13 +222,12 @@ export function DimensionAccordion({
             <article
               key={dim.id}
               id={`dim-${dim.id}`}
-              className="scroll-mt-8"
+              className="scroll-mt-8 border-t border-[var(--line)] pt-6 first:border-t-0 first:pt-0"
             >
               <header className="flex items-start justify-between gap-4">
-                <h3 className="flex min-w-0 items-center gap-2 text-[17px] font-semibold tracking-tight">
-                  <span className="text-[var(--muted)]">{index + 1}</span>
-                  <span>{dim.name}</span>
-                  {isHighWeightDimension(dim) && <Star />}
+                <h3 className="min-w-0 text-[17px] font-semibold tracking-tight">
+                  <span className="text-[var(--muted)]">{index + 1}.</span>{" "}
+                  {dim.name}
                 </h3>
                 <span
                   className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${scorePillClass(dimensionTone(dim))}`}
@@ -206,22 +236,17 @@ export function DimensionAccordion({
                 </span>
               </header>
 
-              {dim.disabledReason && (
-                <p className="mt-3 text-sm text-[var(--muted)]">
-                  {dim.disabledReason}
+              {impact ? (
+                <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                  {impactLabel(impact)}
                 </p>
-              )}
-              {dim.notApplicableReason && (
-                <p className="mt-3 text-sm text-[var(--muted)]">
-                  {dim.notApplicableReason}
-                </p>
-              )}
+              ) : null}
 
-              <p className="mt-3 text-[15px] leading-relaxed text-[var(--ink)]">
-                {scoredRationale(dim)}
+              <p className="mt-3 max-w-prose text-[15px] leading-relaxed text-[var(--ink)]">
+                {na ? na.explanation : scoreExplanation(dim)}
               </p>
 
-              {!dim.disabled && !dim.notApplicable && (
+              {!na && evidenceUi.explanation ? (
                 <p
                   className={`mt-2 text-xs ${
                     evidenceUi.tone === "warning" || evidenceUi.tone === "caution"
@@ -230,9 +255,9 @@ export function DimensionAccordion({
                   }`}
                 >
                   {evidenceUi.label}
-                  {evidenceUi.explanation ? ` — ${evidenceUi.explanation}` : ""}
+                  {` — ${evidenceUi.explanation}`}
                 </p>
-              )}
+              ) : null}
 
               <section className="mt-5">
                 <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
@@ -240,50 +265,24 @@ export function DimensionAccordion({
                 </h4>
                 {!hasEvidence ? (
                   <p className="mt-2 text-sm text-[var(--muted)]">
-                    No transcript evidence attached.
+                    {na
+                      ? "This dimension was not scored."
+                      : "No transcript evidence attached."}
                   </p>
                 ) : (
-                  <ul className="mt-2 space-y-2.5">
+                  <ul className="mt-3 space-y-3">
                     {verifiedItems.map((ev, i) => (
-                      <li key={`v-${i}`} className="text-[14px] leading-relaxed">
-                        <span className="font-medium text-[var(--ink)]">
-                          {ev.speaker ?? "Speaker"}:{" "}
-                        </span>
-                        <span className="text-[var(--ink)]">“{ev.quote}”</span>
-                        <span className="ml-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--good)]">
-                          {evidenceItemLabel(ev)}
-                        </span>
-                        {ev.location ? (
-                          <span className="ml-1 text-xs text-[var(--muted)]">
-                            · {ev.location}
-                          </span>
-                        ) : null}
-                      </li>
-                    ))}
-                    {ndItems.map((ev, i) => (
-                      <li
-                        key={`nd-${i}`}
-                        className="text-sm leading-relaxed text-[var(--muted)]"
-                      >
-                        {ev.quote}
-                        <span className="ml-2 text-[11px] font-semibold uppercase tracking-wide">
-                          {evidenceItemLabel(ev)}
-                        </span>
-                      </li>
+                      <EvidenceRow key={`v-${i}`} ev={ev} kind="verified" />
                     ))}
                     {unverifiedItems.map((ev, i) => (
-                      <li
-                        key={`u-${i}`}
-                        className="text-[14px] leading-relaxed text-[#8a6a12]"
-                      >
-                        <span className="font-medium">
-                          {ev.speaker ?? "Speaker"}:{" "}
-                        </span>
-                        “{ev.quote}”
-                        <span className="ml-2 text-[11px] font-semibold uppercase tracking-wide">
-                          Unverified — not in transcript
-                        </span>
-                      </li>
+                      <EvidenceRow key={`u-${i}`} ev={ev} kind="unverified" />
+                    ))}
+                    {ndItems.map((ev, i) => (
+                      <EvidenceRow
+                        key={`nd-${i}`}
+                        ev={ev}
+                        kind="not_demonstrated"
+                      />
                     ))}
                   </ul>
                 )}

@@ -104,7 +104,7 @@ export const coachingRubric: Rubric = {
       description: "Connect current block to 12-month vision and identity.",
       scoringCriteria: "Elite 15 | Strong 10 | Mid 5 | Fail 0. No vision connection → max 10.",
       quickFixAction:
-        "Name this block, name the 12-month vision, and connect both to who they are becoming.",
+        "Explicitly name the current training block, reconnect it to the client's longer-term goal, and explain how today's work moves them toward that outcome.",
       discreteScores: [0, 5, 10, 15],
       bands: [
         { name: "Elite", min: 15, max: 15, criteria: "Block explained + 12-month vision by name + belief." },
@@ -155,7 +155,7 @@ export const coachingRubric: Rubric = {
       description: "Both sides leave with specific, time-bound, owned commitments.",
       scoringCriteria: "Elite 15 | Strong 10 | Mid 5 | Fail 0.",
       quickFixAction:
-        "Leave with coach and client commitments that have owners and deadlines.",
+        "Give the client one clear deliverable, assign an owner and deadline, and confirm what happens if the commitment is missed.",
       discreteScores: [0, 5, 10, 15],
       bands: [
         { name: "Elite", min: 15, max: 15, criteria: "Coach + client specific commitments with deadlines + ownership." },
@@ -171,7 +171,7 @@ export const coachingRubric: Rubric = {
       description: "Single-point (or progression-gated) client-owned deliverable with consequence.",
       scoringCriteria: "Elite 5 | Mid 3 | Fail 0.",
       quickFixAction:
-        "Name one client-owned deliverable, get a confirm, and state what happens if it is missed.",
+        "Name one client-owned deliverable, get a spoken confirmation, and state what happens if it is missed.",
       discreteScores: [0, 3, 5],
       bands: [
         { name: "Elite", min: 5, max: 5, criteria: "Named/gated deliverable client confirms; consequence clear." },
@@ -216,7 +216,7 @@ export const coachingRubric: Rubric = {
       description: "Booked LIVE before call ends — non-negotiable.",
       scoringCriteria: "Elite 5 | Fail 0. Not booked = automatic 0.",
       quickFixAction:
-        "Book the next call live and confirm the date out loud.",
+        "Choose the next date and time with the client while still on the call, confirm it out loud, and ensure the calendar invite is sent before ending the session.",
       discreteScores: [0, 5],
       bands: [
         { name: "Elite", min: 5, max: 5, criteria: "Booked live; date confirmed verbally." },
@@ -230,7 +230,7 @@ export const coachingRubric: Rubric = {
       description: "Client knows exactly what happens after — coach deliverable with timing. Score in-call promise only.",
       scoringCriteria: "Elite 5 | Mid 3 | Fail 0.",
       quickFixAction:
-        "Restate the anchor and name the coach follow-up with a specific time.",
+        "Restate the accountability anchor and name the coach follow-up with a specific time and channel.",
       discreteScores: [0, 3, 5],
       bands: [
         { name: "Elite", min: 5, max: 5, criteria: "Anchor restated + coach follow-up with specific timing." },

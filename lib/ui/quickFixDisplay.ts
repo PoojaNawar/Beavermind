@@ -1,7 +1,14 @@
 "use client";
 
 import type { DimensionResult } from "@/lib/rubrics/types";
-import { FULL_MARKS_QUICK_FIX } from "@/lib/scoring/quickFix";
+import {
+  FULL_MARKS_QUICK_FIX,
+  isIncompleteQuickFix,
+} from "@/lib/scoring/quickFix";
+import {
+  firstSentence,
+  hideInternalIds,
+} from "@/lib/ui/reportPresentation";
 import {
   quickFixForDisplay,
   sanitizeQuickFixTypography,
@@ -122,6 +129,97 @@ function kickoffNextStepsFix(): QuickFixView {
   };
 }
 
+function fullMarksPraise(dim: DimensionResult): string | null {
+  const cleaned = hideInternalIds(dim.rationale.trim()).replace(
+    /^scored\s+\d+(?:\.\d+)?\s*\/\s*\d+\s*(?:because\s+)?/i,
+    "",
+  );
+  if (cleaned.length < 28) return null;
+  if (
+    /scored from the rubric|could have been better|not demonstrated|missing elite/i.test(
+      cleaned,
+    )
+  ) {
+    return null;
+  }
+  return firstSentence(cleaned);
+}
+
+function claimsUnverifiedAsFact(dim: DimensionResult, text: string): boolean {
+  if (dim.verifiedEvidenceCount > 0) return false;
+  if (dim.rejectedEvidenceCount === 0 && !dim.notDemonstrated) return false;
+  return /the client (clearly )?(stated|named|established|confirmed|shared)|clearly established/i.test(
+    text,
+  );
+}
+
+function coachingDimensionFix(dim: DimensionResult): QuickFixView | null {
+  const visionUnverified =
+    dim.verifiedEvidenceCount === 0 && dim.rejectedEvidenceCount > 0;
+
+  switch (dim.id) {
+    case "d3":
+      return {
+        title: "Connect the current block to the long-term vision",
+        body: visionUnverified
+          ? "The transcript does not provide sufficient verified evidence of a clearly established long-term vision. Explicitly name the current training block, reconnect it to the client's longer-term goal, and explain how today's work moves them toward that outcome."
+          : "Explicitly name the current training block, reconnect it to the client's longer-term goal, and explain how today's work moves them toward that outcome.",
+        steps: null,
+        complete: false,
+      };
+    case "d5":
+      return {
+        title: "Frame the adjustment as strategy",
+        body: "Explain the adjustment as strategy that protects the long game, not a demotion, and check that the client understands why it is the right move now.",
+        steps: null,
+        complete: false,
+      };
+    case "d6":
+      return {
+        title: "Make accountability owned and time-bound",
+        body: "Give the client one clear deliverable, assign an owner and deadline, and confirm what happens if the commitment is missed.",
+        steps: null,
+        complete: false,
+      };
+    case "d7":
+      return {
+        title: "Name one client-owned deliverable",
+        body: "Name one client-owned deliverable, get a spoken confirmation, and state what happens if it is missed.",
+        steps: null,
+        complete: false,
+      };
+    case "d10":
+      return {
+        title: "Book the next call before ending the session",
+        body: "Choose the next date and time with the client while still on the call, confirm it out loud, and ensure the calendar invite is sent before ending the session.",
+        steps: null,
+        complete: false,
+      };
+    case "d11":
+      return {
+        title: "Make follow-up owned and timed",
+        body: "Restate the accountability anchor and name the coach follow-up with a specific time and channel so both sides know who owes what after the call.",
+        steps: null,
+        complete: false,
+      };
+    default:
+      return null;
+  }
+}
+
+function dedupeTitleBody(title: string, body: string | null): {
+  title: string;
+  body: string | null;
+} {
+  if (!body) return { title, body };
+  const norm = (s: string) =>
+    s.toLowerCase().replace(/[.,]/g, "").replace(/\s+/g, " ").trim();
+  if (norm(title) === norm(body)) {
+    return { title, body: null };
+  }
+  return { title, body };
+}
+
 /**
  * Present the stored quickFix as a coach-facing title + action.
  * Does not change scores, evidence, or the stored evaluation payload.
@@ -140,16 +238,19 @@ export function presentQuickFix(
   if (atFullMarks) {
     return {
       title: FULL_MARKS_QUICK_FIX,
-      body: null,
+      body: fullMarksPraise(dim),
       steps: null,
       complete: true,
     };
   }
 
-  const source = sourceText(dim);
-  if (!source) {
-    return null;
+  if (callType === "coaching") {
+    const coaching = coachingDimensionFix(dim);
+    if (coaching) return coaching;
   }
+
+  const source = sourceText(dim);
+  const usable = Boolean(source) && !isIncompleteQuickFix(source);
 
   if (callType === "kickoff" && dim.id === "d9") {
     return kickoffNextStepsFix();
@@ -171,13 +272,19 @@ export function presentQuickFix(
     return kickoffProgramFix();
   }
 
+  if (!usable) {
+    return null;
+  }
+
   if (GENERIC_ADVICE.test(source) && source.split(/\s+/).length < 8) {
-    return {
+    const view = {
       title: titleFromAction(source),
       body: polishActionOutcome(source),
       steps: null,
       complete: false,
     };
+    const deduped = dedupeTitleBody(view.title, view.body);
+    return { ...view, ...deduped };
   }
 
   if (isRapportDimension(dim, callType) && PERSONAL_SHARE_RE.test(source)) {
@@ -209,9 +316,17 @@ export function presentQuickFix(
     };
   }
 
+  let body = polishActionOutcome(source);
+  if (claimsUnverifiedAsFact(dim, body)) {
+    body =
+      "The transcript does not provide sufficient verified evidence of that behaviour. " +
+      body;
+  }
+
+  const deduped = dedupeTitleBody(titleFromAction(source), body);
   return {
-    title: titleFromAction(source),
-    body: polishActionOutcome(source),
+    title: deduped.title,
+    body: deduped.body,
     steps: null,
     complete: false,
   };

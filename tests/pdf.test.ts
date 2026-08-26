@@ -75,5 +75,8 @@ describe("buildEvaluationPdf", () => {
 
     expect(pdf.subarray(0, 4).toString("utf8")).toBe("%PDF");
     expect(pdf.length).toBeGreaterThan(500);
+    const asText = pdf.toString("latin1");
+    expect(asText).not.toMatch(/d10 forced/i);
+    expect(asText).not.toMatch(/Capped:/);
   });
 });

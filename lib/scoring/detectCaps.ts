@@ -45,15 +45,8 @@ export function detectDeterministicCapIds(
   }
 
   if (callType === "coaching" && !hasLiveNextCallBooking(transcript)) {
-    // Only auto-fire when deferral language is explicit — absence of booking
-    // chatter alone is too weak for a hard force-to-zero cap.
-    const clearlyDeferred =
-      /assistant handles the scheduling|reach out .{0,40}times|we'll (?:find|figure) a time (?:later|offline)/i.test(
-        transcript,
-      );
-    if (clearlyDeferred) {
-      ids.push("next-call-not-booked");
-    }
+    // Rubric: not booked live → hard 0. Fire whenever live booking is absent.
+    ids.push("next-call-not-booked");
   }
 
   return ids;

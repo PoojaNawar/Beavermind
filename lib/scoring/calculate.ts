@@ -18,6 +18,8 @@ import {
   kickoffHasStructuredRecap,
 } from "@/lib/scoring/kickoffClose";
 import { nextEliteScore } from "@/lib/scoring/eliteBar";
+import { capScoreWithoutVerifiedEvidence } from "@/lib/transcripts/evidencePolicy";
+import { computeScoreIfApplied } from "@/lib/scoring/scoreIfApplied";
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
@@ -57,8 +59,8 @@ export function normalizeToHundred(
 
 /**
  * Backend-owned totals, caps, and grade.
- * Evidence strength/counts are attached after scores are fixed — they must
- * not feed back into dimension or overall scoring.
+ * Unverified-only Elite proposals are capped down before totals; evidence
+ * strength metadata alone never raises a score.
  */
 export function applyCapsAndBuildResult(args: {
   model: ModelEvaluationOutput;
@@ -91,6 +93,26 @@ export function applyCapsAndBuildResult(args: {
         score = clamp(score, 0, def.maxScore);
       } else if (rubric.id === "kickoff") {
         score = Math.round(score);
+      }
+
+      const verified = d.evidence.filter(
+        (e) =>
+          e.verificationStatus === "verified" ||
+          (!e.verificationStatus && e.demonstrated),
+      ).length;
+      const unverified = d.evidence.filter(
+        (e) => e.verificationStatus === "unverified",
+      ).length;
+      if (
+        !d.notDemonstrated &&
+        verified === 0 &&
+        unverified > 0
+      ) {
+        score = capScoreWithoutVerifiedEvidence(
+          score,
+          def.maxScore,
+          def.discreteScores,
+        );
       }
     }
 
@@ -204,7 +226,7 @@ export function applyCapsAndBuildResult(args: {
   );
 
   let scoreIfApplied: number | null = null;
-  const basis = model.oneThing.scoreIfAppliedBasis;
+  let basis = model.oneThing.scoreIfAppliedBasis;
   if (
     model.oneThing.estimatedPointsGained !== null &&
     model.oneThing.estimatedPointsGained >= 0
@@ -221,7 +243,7 @@ export function applyCapsAndBuildResult(args: {
     scoreIfAppliedBasis: basis,
   };
 
-  return {
+  const draft: EvaluationResult = {
     callType: rubric.id,
     rubricVersion: rubric.version,
     overallScore,
@@ -234,6 +256,17 @@ export function applyCapsAndBuildResult(args: {
     firedCaps,
     modelName,
     evidenceQuality: summarizeReportEvidence(dimensions),
+  };
+
+  // Backend projection replaces the model's point-gain guess.
+  const projection = computeScoreIfApplied(draft);
+  return {
+    ...draft,
+    oneThing: {
+      ...draft.oneThing,
+      scoreIfApplied: projection.scoreIfApplied,
+      scoreIfAppliedBasis: projection.scoreIfAppliedBasis,
+    },
   };
 }
 

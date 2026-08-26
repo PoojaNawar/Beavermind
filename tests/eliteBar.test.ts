@@ -155,6 +155,21 @@ describe("coaching-01 quality bar", () => {
     expect(coachingHasCheckInElite(hello)).toBe(false);
     expect(nextEliteScore("coaching", "d1", 10, hello)).toBe(7);
   });
+
+  it("forces next-call booking to 0 when the call was not booked live", () => {
+    const deferred =
+      "Great work today. My assistant will reach out with some times next week.";
+    expect(nextEliteScore("coaching", "d10", 5, deferred)).toBe(0);
+  });
+
+  it("caps vision / accountability Elite when transcript markers are missing", () => {
+    const thin =
+      "[Coach]: Keep doing the workouts.\n[Client]: Okay.\n[Coach]: Talk later.";
+    expect(nextEliteScore("coaching", "d3", 15, thin)).toBe(10);
+    expect(nextEliteScore("coaching", "d6", 15, thin)).toBe(10);
+    expect(nextEliteScore("coaching", "d7", 5, thin)).toBe(3);
+    expect(nextEliteScore("coaching", "d11", 5, thin)).toBe(3);
+  });
 });
 
 function dim(

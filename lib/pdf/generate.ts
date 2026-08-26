@@ -1,11 +1,19 @@
 import PDFDocument from "pdfkit";
 import type { EvaluationAudit, EvaluationResult } from "@/lib/rubrics/types";
-import { dimensionEvidenceUi } from "@/lib/transcripts/evidenceQuality";
 import { hydrateCompletedReport } from "@/lib/scoring/hydrateReport";
-import { scoredRationale } from "@/lib/ui/scoreTone";
 import { presentQuickFix } from "@/lib/ui/quickFixDisplay";
 import { quickFixForPdf } from "@/lib/ui/quickFixTypography";
 import { pdfSafeText } from "@/lib/pdf/text";
+import {
+  briefSections,
+  dimensionImpact,
+  impactLabel,
+  notApplicableCopy,
+  scoreExplanation,
+  scoreHeadline,
+  scoringNotes,
+} from "@/lib/ui/reportPresentation";
+import { coachingPillars } from "@/lib/scoring/scoreIfApplied";
 
 function callTypeLabel(callType: string): string {
   return callType === "kickoff" ? "Kick-off Call" : "Coaching Call";
@@ -89,10 +97,9 @@ export async function buildEvaluationPdf(
     if (meta.clientDetails?.trim()) {
       metaLine(meta.clientDetails.trim());
     }
-    metaLine(`${callTypeLabel(result.callType)}  ·  Rubric ${result.rubricVersion}`);
+    metaLine(`${callTypeLabel(result.callType)}  ·  ${result.rubricVersion}`);
     metaLine(`Evaluation ID: ${meta.id}`);
     metaLine(`Created: ${new Date(meta.createdAt).toLocaleString()}`);
-    metaLine(`Model: ${result.modelName}`);
     doc.moveDown(0.6);
     doc
       .strokeColor(rule)
@@ -102,8 +109,11 @@ export async function buildEvaluationPdf(
       .stroke();
     doc.moveDown(0.8);
 
-    // Score
-    h2("Overall");
+    const notes = scoringNotes(result);
+    const brief = briefSections(result);
+    const headline = scoreHeadline(result);
+
+    h2("Score");
     doc
       .fillColor(ink)
       .font("Helvetica-Bold")
@@ -117,66 +127,99 @@ export async function buildEvaluationPdf(
       .fillColor(accent)
       .font("Helvetica-Bold")
       .fontSize(14)
-      .text(pdfSafeText(result.grade));
-    if (result.scoreOutOf !== 100) {
-      metaLine(
-        `Raw score normalized from ${result.scoreOutOf} available points (optional dimensions disabled/N/A).`,
-      );
-    }
-    doc.moveDown(0.3);
+      .text(pdfSafeText(result.grade.toUpperCase()));
+    metaLine(`Based on ${result.scoreOutOf} applicable points`);
+    doc.moveDown(0.25);
+    body(headline);
+
     h2("One Thing");
     body(result.oneThing.recommendation);
-    body(`Why it matters: ${result.oneThing.impact}`);
+    if (result.oneThing.impact) {
+      body(result.oneThing.impact);
+    }
     if (result.oneThing.scoreIfApplied !== null) {
       body(
-        `Projected score if applied: ${result.oneThing.scoreIfApplied}/100 — ${result.oneThing.scoreIfAppliedBasis}`,
+        `If applied: ${result.oneThing.scoreIfApplied}/100 — ${result.oneThing.scoreIfAppliedBasis}`,
       );
-    } else {
-      body(
-        `Projected score: not reliably determinable. ${result.oneThing.scoreIfAppliedBasis}`,
-      );
+    } else if (result.oneThing.scoreIfAppliedBasis) {
+      body(result.oneThing.scoreIfAppliedBasis);
     }
 
-    h2("Brief");
-    body(result.brief);
+    if (result.callType === "coaching") {
+      const pillars = coachingPillars(result);
+      if (pillars.length > 0) {
+        h2("Pillars");
+        metaLine("Connection · Confidence · Continuity");
+        doc.moveDown(0.2);
+        for (const pillar of pillars) {
+          const pct =
+            pillar.ratio === null ? 0 : Math.round(pillar.ratio * 100);
+          ensureSpace(40);
+          doc
+            .fillColor(ink)
+            .font("Helvetica-Bold")
+            .fontSize(10)
+            .text(
+              pdfSafeText(
+                `${pillar.name}  ${pct}%  (${pillar.earned}/${pillar.available})`,
+              ),
+            );
+          if (pillar.dragged) {
+            metaLine("Dragged the score");
+          }
+          if (pillar.weakest) {
+            metaLine(
+              `Weakest: ${pillar.weakest.name} (${pillar.weakest.score}/${pillar.weakest.maxScore})`,
+            );
+          } else {
+            metaLine("Full marks across this pillar");
+          }
+          doc.moveDown(0.25);
+        }
+      }
+    }
 
-    h2("Red Flags");
-    if (result.redFlags.length === 0) {
-      body("No red flags identified from transcript evidence.");
-    } else {
+    h2("What went well");
+    body(brief.well);
+    h2("What held the score back");
+    body(brief.held);
+    h2("What to do next");
+    body(brief.next);
+
+    if (result.redFlags.length > 0) {
+      h2("Red Flags");
       for (const flag of result.redFlags) {
         ensureSpace(60);
         doc.fillColor(ink).font("Helvetica-Bold").fontSize(10).text(pdfSafeText(flag.title));
         body(flag.explanation);
-        doc
-          .fillColor(muted)
-          .font("Helvetica-Oblique")
-          .fontSize(9)
-          .text(pdfSafeText(`Evidence: ${flag.evidence}`));
-        doc.moveDown(0.5);
       }
     }
 
     h2("Evidence quality");
     body(
-      `Found: ${result.evidenceQuality.found}  ·  Verified: ${result.evidenceQuality.verified}  ·  Rejected: ${result.evidenceQuality.rejected}  ·  Not demonstrated: ${result.evidenceQuality.notDemonstratedDimensions} dimensions`,
+      `${result.evidenceQuality.verified} / ${result.evidenceQuality.found} verified`,
     );
-    if (result.firedCaps.length > 0) {
-      body(
-        `Caps applied: ${result.firedCaps.map((c) => c.effect).join("; ")}`,
-      );
-    }
-    doc.moveDown(0.4);
+    metaLine(
+      `${result.evidenceQuality.rejected} rejected  ·  ${result.evidenceQuality.notDemonstratedDimensions} not demonstrated`,
+    );
+    doc.moveDown(0.3);
 
-    h1("Twelve Dimensions");
+    if (notes.length > 0) {
+      h2("Scoring notes");
+      for (const note of notes) {
+        body(`*  ${note}`);
+      }
+    }
+
+    h1("Dimensions");
+    metaLine(`${result.dimensions.length} evaluation dimensions`);
+    doc.moveDown(0.4);
 
     for (const [index, dim] of result.dimensions.entries()) {
       ensureSpace(120);
-      const scoreLabel = dim.disabled
-        ? "Disabled"
-        : dim.notApplicable
-          ? "N/A"
-          : `${dim.score}/${dim.maxScore}`;
+      const na = notApplicableCopy(dim);
+      const scoreLabel = na ? "Not applicable" : `${dim.score}/${dim.maxScore}`;
+      const impact = dimensionImpact(dim, result);
 
       doc
         .fillColor(ink)
@@ -187,44 +230,11 @@ export async function buildEvaluationPdf(
         .fillColor(muted)
         .text(pdfSafeText(`    ${scoreLabel}`));
 
-      if (dim.disabled && dim.disabledReason) {
-        body(`Disabled: ${dim.disabledReason}`);
-      }
-      if (dim.notApplicable && dim.notApplicableReason) {
-        body(`Not applicable: ${dim.notApplicableReason}`);
+      if (impact) {
+        metaLine(impactLabel(impact).toUpperCase());
       }
 
-      if (!dim.disabled && !dim.notApplicable) {
-        const evidenceUi = dimensionEvidenceUi(dim);
-        doc
-          .fillColor(
-            evidenceUi.tone === "warning" || evidenceUi.tone === "caution"
-              ? "#8a5a2b"
-              : muted,
-          )
-          .font("Helvetica-Bold")
-          .fontSize(9)
-          .text(pdfSafeText(`Evidence status: ${evidenceUi.label}`));
-        doc
-          .fillColor(muted)
-          .font("Helvetica")
-          .fontSize(9)
-          .text(
-            pdfSafeText(
-              `Evidence strength: ${dim.evidenceStrength} (does not affect score)`,
-            ),
-          );
-        if (evidenceUi.explanation) {
-          doc
-            .fillColor(ink)
-            .font("Helvetica")
-            .fontSize(9)
-            .text(pdfSafeText(evidenceUi.explanation));
-        }
-        doc.moveDown(0.2);
-      }
-
-      body(scoredRationale(dim));
+      body(na ? na.explanation : scoreExplanation(dim));
 
       const verified = dim.evidence.filter((e) => e.verificationStatus === "verified");
       const unverified = dim.evidence.filter((e) => e.verificationStatus === "unverified");
@@ -235,7 +245,7 @@ export async function buildEvaluationPdf(
       doc.fillColor(muted).font("Helvetica-Bold").fontSize(9).text("EVIDENCE");
       doc.moveDown(0.15);
       if (verified.length === 0 && unverified.length === 0 && ndItems.length === 0) {
-        body("No transcript evidence attached.");
+        body(na ? "This dimension was not scored." : "No transcript evidence attached.");
       }
       for (const ev of verified) {
         const speaker = ev.speaker ? `${ev.speaker}: ` : "";
@@ -244,35 +254,25 @@ export async function buildEvaluationPdf(
           .fillColor(ink)
           .font("Helvetica-Oblique")
           .fontSize(9)
-          .text(
-            pdfSafeText(`${speaker}"${ev.quote}"  - VERIFIED${loc}`),
-          );
+          .text(pdfSafeText(`VERIFIED  ${speaker}"${ev.quote}"${loc}`));
+        metaLine("Evidence appears in transcript.");
+      }
+      for (const ev of unverified) {
+        const speaker = ev.speaker ? `${ev.speaker}: ` : "";
+        doc
+          .fillColor("#8a5a2b")
+          .font("Helvetica-Oblique")
+          .fontSize(9)
+          .text(pdfSafeText(`UNVERIFIED  ${speaker}"${ev.quote}"`));
+        metaLine("Proposed evidence could not be found in transcript.");
       }
       for (const ev of ndItems) {
         doc
           .fillColor(muted)
           .font("Helvetica")
           .fontSize(9)
-          .text(pdfSafeText(`${ev.quote} - NOT DEMONSTRATED`));
-      }
-      if (unverified.length > 0) {
-        doc
-          .fillColor("#8a5a2b")
-          .font("Helvetica-Bold")
-          .fontSize(9)
-          .text("Proposed but unverified evidence");
-        for (const ev of unverified) {
-          const speaker = ev.speaker ? `[${ev.speaker}] ` : "";
-          doc
-            .fillColor(ink)
-            .font("Helvetica-Oblique")
-            .fontSize(9)
-            .text(
-              pdfSafeText(
-                `"${ev.quote}" - ${speaker}UNVERIFIED - not found in original transcript`,
-              ),
-            );
-        }
+          .text(pdfSafeText(`NOT DEMONSTRATED  ${ev.quote}`));
+        metaLine("Insufficient evidence that the behavior occurred.");
       }
       doc.moveDown(0.3);
 
@@ -284,7 +284,11 @@ export async function buildEvaluationPdf(
           .fillColor(ink)
           .font("Helvetica-Bold")
           .fontSize(10)
-          .text(quickFixForPdf(quickFix.title));
+          .text(
+            quickFixForPdf(
+              quickFix.complete ? "Full marks reached" : quickFix.title,
+            ),
+          );
         if (quickFix.body) {
           doc.moveDown(0.12);
           body(quickFixForPdf(quickFix.body));
@@ -315,10 +319,6 @@ export async function buildEvaluationPdf(
       doc.moveDown(0.6);
     }
 
-    const audit = meta.audit;
-    metaLine(
-      `Pipeline: ${audit?.pipelineVersion ?? "Not recorded"}  ·  Path: ${audit?.processingPath ?? "Not recorded"}  ·  Model: ${meta.modelName ?? result.modelName ?? "Not recorded"}`,
-    );
     metaLine(`Evaluation ID: ${meta.id}`);
 
     doc.end();

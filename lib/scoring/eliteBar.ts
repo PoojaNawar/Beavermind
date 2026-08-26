@@ -7,6 +7,7 @@
  */
 
 import type { CallType } from "@/lib/rubrics/types";
+import { hasLiveNextCallBooking } from "@/lib/scoring/detectCaps";
 
 export function kickoffHasJourneyElite(transcript: string): boolean {
   const valley = /week three|week 3|week four|week 4|\bvalley\b/i.test(transcript);
@@ -138,6 +139,70 @@ export function coachingHasCheckInElite(transcript: string): boolean {
   return body && winOrStruggle && reflectOrIntention;
 }
 
+export function coachingHasVisionElite(transcript: string): boolean {
+  const block =
+    /(?:this|current|training) block|block (?:one|two|three|\d)|phase (?:one|two|three)/i.test(
+      transcript,
+    );
+  const vision =
+    /12[- ]?month|twelve[- ]?month|long[- ]?term (?:vision|goal)|who you(?:'re| are) becoming|north star/i.test(
+      transcript,
+    );
+  const connected =
+    /connect(?:s|ed|ing)? (?:this|that|it|the block)|toward(?:s)? (?:that|your)|maps (?:onto|to)|for (?:that|your) (?:goal|vision)/i.test(
+      transcript,
+    );
+  return block && vision && connected;
+}
+
+export function coachingHasAccountabilityElite(transcript: string): boolean {
+  const commitment =
+    /you(?:'ll| will) (?:do|send|post|complete|bring)|i(?:'ll| will) (?:send|follow|check|review)|by (?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|end of)/i.test(
+      transcript,
+    );
+  const ownership =
+    /you own|your (?:job|deliverable|commitment)|i(?:'ll| will) (?:own|take)|on you to/i.test(
+      transcript,
+    );
+  const deadline =
+    /by (?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d)|before (?:our|the) next|this week|by eod|end of (?:day|week)/i.test(
+      transcript,
+    );
+  return commitment && (ownership || deadline);
+}
+
+export function coachingHasAnchorElite(transcript: string): boolean {
+  const deliverable =
+    /one thing|deliverable|your (?:job|commitment) (?:is|this week)|accountability (?:is|anchor)/i.test(
+      transcript,
+    );
+  const confirm =
+    /(?:can you|will you) (?:confirm|commit)|does that work|i(?:'ll| will) (?:do|own) that|yes[,.]? (?:i(?:'ll| will)|that works)/i.test(
+      transcript,
+    );
+  const consequence =
+    /if (?:you|that) (?:miss|don(?:'t| not)|skip)|otherwise we|then we(?:'ll| will)|consequence/i.test(
+      transcript,
+    );
+  return deliverable && confirm && consequence;
+}
+
+export function coachingHasContinuityElite(transcript: string): boolean {
+  const coachFollowUp =
+    /i(?:'ll| will) (?:send|follow up|check in|message|email)|you(?:'ll| will) (?:get|hear) from me/i.test(
+      transcript,
+    );
+  const timing =
+    /by (?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow)|\d{1,2}\s*(?::\d{2})?\s*(?:am|pm)|this (?:afternoon|evening|week)|within \d+/i.test(
+      transcript,
+    );
+  const channel =
+    /(?:in the )?(?:app|chat|email|text|community|thread|message)/i.test(
+      transcript,
+    );
+  return coachFollowUp && timing && channel;
+}
+
 /**
  * If the model awarded Elite on a discrete dimension but the transcript is
  * missing a required elite item, snap to Strong. Never raises a score.
@@ -175,13 +240,37 @@ export function nextEliteScore(
     }
   }
 
-  if (
-    callType === "coaching" &&
-    dimensionId === "d1" &&
-    score >= 10 &&
-    !coachingHasCheckInElite(transcript)
-  ) {
-    return 7;
+  if (callType === "coaching") {
+    if (dimensionId === "d1" && score >= 10 && !coachingHasCheckInElite(transcript)) {
+      return 7;
+    }
+    if (dimensionId === "d3" && score >= 15 && !coachingHasVisionElite(transcript)) {
+      return 10;
+    }
+    if (
+      dimensionId === "d6" &&
+      score >= 15 &&
+      !coachingHasAccountabilityElite(transcript)
+    ) {
+      return 10;
+    }
+    if (dimensionId === "d7" && score >= 5 && !coachingHasAnchorElite(transcript)) {
+      return 3;
+    }
+    if (
+      dimensionId === "d10" &&
+      score > 0 &&
+      !hasLiveNextCallBooking(transcript)
+    ) {
+      return 0;
+    }
+    if (
+      dimensionId === "d11" &&
+      score >= 5 &&
+      !coachingHasContinuityElite(transcript)
+    ) {
+      return 3;
+    }
   }
 
   return score;

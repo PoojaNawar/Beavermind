@@ -15,10 +15,15 @@ CRITICAL ANTI-HALLUCINATION RULES:
 8. Score only according to the rubric bands/buckets. For coaching calls, scores must be exact bucket values.
 9. Red flags are independent of overall score — a high score can still have red flags.
 10. For "The One Thing", estimate points gained only when the rubric makes that defensible; otherwise set estimatedPointsGained to null and explain in scoreIfAppliedBasis.
-11. quickFix is what the coach had to do on THIS dimension to reach full marks — one unique, specific, actionable sentence grounded in what this transcript missed. Do not repeat the same sentence across dimensions, paste scoring shorthand, or invent extra questions. Never write generic advice ("be more empathetic", "build more rapport", "improve communication"). For workflows write ASCII " -> " between steps (example: diagnostic -> film -> upload). Never use other separators. At full marks, N/A, or disabled: set quickFix to "".
+11. quickFix is what the coach had to do on THIS dimension to reach full marks — one unique, specific, COMPLETE sentence grounded in what this transcript missed. Never truncate. Never end on "and", "with a", "the", or a hanging clause. Do not repeat the same sentence across dimensions, paste scoring shorthand, or invent extra questions. Never write generic advice ("be more empathetic", "build more rapport", "improve communication"). For workflows write ASCII " -> " between steps (example: diagnostic -> film -> upload). Never use other separators. At full marks, N/A, or disabled: set quickFix to "".
 12. Elite (10/10, 15/15, 5/5) requires EVERY listed elite criterion to be evidenced in THIS transcript, and that it landed when the rubric asks for client confirmation. Mentioning the topic, being generally strong, or hitting most of the list is Strong — never 10/10. Pattern notes ("most coaches miss recap") are not this call's score: do not default to them, and do not default to full marks either.
-13. Never recommend a behaviour that is already demonstrated in verified quotes.
-14. Kick-off quality (existing bands only): D2 a personal story is not automatically Strong/Elite — score relevance, understanding, resonance, returning focus to the client, and whether it felt natural. D4 score why identified / stated back / confirmed / North Star / 30-day marker; do not penalize late discovery when the call needed discovery first. D5 naming three phases is not Elite — score job, outcome, analogy, goal tie. D9 the client must understand what, how, where, by when, with verified understanding; equivalent confirmation counts, a scripted repeat-back is not required.
+13. Never recommend a behaviour that is already demonstrated in verified quotes. Never treat an unverified or rejected quote as established fact.
+14. Score QUALITY, timing, client confirmation, and outcome — not checkbox presence. A personal story is not automatic rapport. Naming a goal is not automatic alignment. Mentioning "next time" is not a live booking. Vague intent is not accountability.
+15. Kick-off quality (existing bands only): D2 a personal story is not automatically Strong/Elite — score relevance, understanding, resonance, returning focus to the client, and whether it felt natural. D4 score why identified / stated back / confirmed / North Star / 30-day marker; do not penalize late discovery when the call needed discovery first. D5 naming three phases is not Elite — score job, outcome, analogy, goal tie. D9 the client must understand what, how, where, by when, with verified understanding; equivalent confirmation counts, a scripted repeat-back is not required.
+16. Coaching quality (existing bands only): D3 score whether the current block, the long-term vision, and identity were named, reflected, confirmed, and used as a North Star — logistics without vision is not Elite. D6 score specific commitments, owners, deadlines, client confirmation, and a miss consequence. D7 needs a single client-owned deliverable with confirmation and consequence. D10 only 5 if the next call was booked LIVE with a confirmed date/time; vague future intent is 0. D11 needs what the coach owes, what the client owes, when, and through which channel.
+17. The One Thing is the highest-leverage improvement — not an arbitrary Quick Fix. Prefer a critical miss (especially live next-call booking), then the largest meaningful deduction, then a weakness that would lift several dimensions at once (accountability + continuity). Never recommend community posting or small extras when a required close behaviour was missed. Do not mention internal dimension IDs. Why it matters must name the coaching outcome (accountability, continuity, confirmed next step) — never "this will improve the coaching experience".
+18. Dimension rationale must answer WHY this score, in 1-2 specific sentences, grounded in verified transcript evidence. Never write "could have been better". If a quote cannot be verified, say the transcript does not provide sufficient verified evidence — do not narrate it as fact.
+19. If a dimension does not apply, mark notApplicable or disabled. Do not penalize. Do not describe it as the coach turning something off.
 
 OUTPUT:
 Return structured JSON matching the schema. Include all 12 dimensions.
@@ -38,10 +43,11 @@ Do not invent evidence. If the pack shows a behaviour was not demonstrated, scor
 When citing evidence in dimension results, reuse verbatim quotes from the evidence pack.
 
 CONCISENESS (required for output limits):
-- brief: max 3 sentences
-- Max 1 evidence quote per dimension (shortest relevant quote)
-- rationale: max 2 sentences per dimension
-- quickFix: 1 unique sentence when below full marks; empty string at full marks / N/A
+- brief: max 3 sentences covering what went well, what held the score back, and what to do next
+- Max 1 evidence quote per dimension (shortest relevant quote). Prefer quotes that actually appear in the pack.
+- rationale: max 2 sentences answering why this score, using verified evidence only
+- quickFix: 1 unique COMPLETE sentence when below full marks; empty string at full marks / N/A. Never truncate.
+- oneThing.recommendation: the single highest-leverage improvement; oneThing.impact: the coaching outcome if that change is made
 - redFlags: only if clearly supported by evidence; max 3 items
 - notes: 1-2 sentences max
 `;

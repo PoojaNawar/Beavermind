@@ -260,4 +260,24 @@ describe("report evidence states", () => {
     expect(ui.tone).not.toBe("success");
     expect(ui.label).toBe("Not demonstrated");
   });
+
+  it("N/A dimensions are labeled not applicable, not disabled", () => {
+    const ui = dimensionEvidenceUi({
+      notDemonstrated: false,
+      verifiedEvidenceCount: 0,
+      rejectedEvidenceCount: 0,
+      notApplicable: true,
+    });
+    expect(ui.label).toBe("Not applicable");
+    expect(ui.explanation).toMatch(/did not occur|did not apply/i);
+
+    const disabled = dimensionEvidenceUi({
+      notDemonstrated: false,
+      verifiedEvidenceCount: 0,
+      rejectedEvidenceCount: 0,
+      disabled: true,
+    });
+    expect(disabled.label).toBe("Not applicable");
+    expect(disabled.label).not.toBe("Disabled");
+  });
 });
