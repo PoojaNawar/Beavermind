@@ -109,8 +109,8 @@ describe("hydrated result page contract", () => {
     expect(overview.summary).toMatch(/opportunit/i);
     expect(overview.opportunities).toBeGreaterThan(0);
     expect(brief.held.toLowerCase()).toMatch(/next.?step/);
-    expect(brief.next.toLowerCase()).toMatch(/close the loop|next step/);
+    expect(brief.next.toLowerCase()).toMatch(/diagnostic|film|upload|confirm/);
     expect(report.oneThing.recommendation).toMatch(/close the loop on next steps/i);
-    expect(scoreHeadline(report)).toMatch(/next.?step|gap/i);
+    expect(scoreHeadline(report)).toMatch(/next.?step|understanding|strong overall/i);
   });
 });

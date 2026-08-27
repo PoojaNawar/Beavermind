@@ -208,7 +208,7 @@ export function DimensionAccordion({
                   <span className="text-[var(--muted)]">{index + 1}.</span>{" "}
                   {dim.name}
                 </h3>
-                <p className="mt-1.5 text-[20px] font-semibold tabular-nums tracking-tight">
+                <p className="font-display mt-1.5 text-[22px] font-semibold tabular-nums tracking-tight">
                   {scoreLabel}
                 </p>
                 {status ? (

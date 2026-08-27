@@ -172,13 +172,13 @@ export function EvaluationReport({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[960px] space-y-8 sm:space-y-10">
-      <header className="flex flex-wrap items-start justify-between gap-4">
+    <div className="mx-auto w-full max-w-[960px] space-y-10 sm:space-y-12">
+      <header className="bm-fade-up flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
             Full analysis
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h1 className="font-display mt-2 text-[34px] font-semibold leading-tight tracking-[-0.02em] sm:text-[42px]">
             {clientName?.trim() || callTypeLabel(report.callType)}
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
@@ -200,7 +200,7 @@ export function EvaluationReport({
           type="button"
           onClick={downloadPdf}
           disabled={pdfBusy}
-          className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[var(--ink)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-black disabled:opacity-50"
+          className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--ink)] disabled:opacity-50"
         >
           <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" aria-hidden>
             <path
@@ -221,10 +221,10 @@ export function EvaluationReport({
         </p>
       ) : null}
 
-      <section className="border-b border-[var(--line)] pb-8">
-        <p className="text-[40px] font-semibold leading-none tracking-tight sm:text-[48px]">
+      <section className="bm-score-in border-b border-[var(--line)] pb-10">
+        <p className="font-display text-[48px] font-semibold leading-none tracking-[-0.03em] sm:text-[56px]">
           {report.overallScore}
-          <span className="text-[22px] font-medium text-[var(--muted)]">
+          <span className="text-[24px] font-medium text-[var(--muted)]">
             {" "}
             / 100
           </span>
@@ -238,25 +238,28 @@ export function EvaluationReport({
         <p className="mt-2 text-sm text-[var(--muted)]">
           Based on {report.scoreOutOf} applicable points
         </p>
-        <p className="mt-4 max-w-3xl text-[15px] leading-relaxed text-[var(--ink)]">
+        <h2 className="mt-7 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+          Summary
+        </h2>
+        <p className="mt-2 max-w-3xl text-[16px] leading-relaxed text-[var(--ink)]">
           {headline}
         </p>
       </section>
 
-      <section className="border-b border-[var(--line)] pb-8">
+      <section className="bm-fade-up bm-fade-up-delay-1 border-b border-[var(--line)] pb-10">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
           One Thing
         </h2>
-        <p className="mt-2 text-[22px] font-semibold leading-snug tracking-tight sm:text-[26px]">
+        <p className="font-display mt-3 text-[26px] font-semibold leading-snug tracking-[-0.02em] sm:text-[30px]">
           {report.oneThing.recommendation}
         </p>
         {report.oneThing.impact ? (
-          <p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-[var(--muted)]">
+          <p className="mt-3 max-w-3xl text-[16px] leading-relaxed text-[var(--muted)]">
             {report.oneThing.impact}
           </p>
         ) : null}
         {report.oneThing.scoreIfApplied !== null ? (
-          <div className="mt-3 space-y-1">
+          <div className="mt-4 space-y-1">
             <p className="text-sm leading-relaxed text-[var(--ink)]">
               Potential score if this gap were fully addressed:{" "}
               <span className="font-semibold tabular-nums">
@@ -269,13 +272,13 @@ export function EvaluationReport({
             </p>
           </div>
         ) : report.oneThing.scoreIfAppliedBasis ? (
-          <p className="mt-3 text-sm text-[var(--muted)]">
+          <p className="mt-4 text-sm text-[var(--muted)]">
             {report.oneThing.scoreIfAppliedBasis}
           </p>
         ) : null}
       </section>
 
-      <section className="border-b border-[var(--line)] pb-8">
+      <section className="bm-fade-up bm-fade-up-delay-2 border-b border-[var(--line)] pb-10">
         <div className="grid gap-8 sm:grid-cols-3">
           <div>
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">

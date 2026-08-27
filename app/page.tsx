@@ -21,14 +21,19 @@ export default function HomePage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl">
-      <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-        New Evaluation
-      </h1>
-      <p className="mt-3 text-base leading-relaxed text-[var(--muted)]">
-        Evaluate each conversation against its rubric with clear, evidence-backed
-        feedback.
-      </p>
-      <div className="mt-10">
+      <div className="bm-fade-up">
+        <p className="font-display text-[42px] font-semibold leading-[1.05] tracking-[-0.03em] text-[var(--ink)] sm:text-[52px]">
+          BeaverMind
+        </p>
+        <h1 className="mt-4 text-[22px] font-semibold tracking-tight text-[var(--ink)] sm:text-[26px]">
+          Judge the call with evidence.
+        </h1>
+        <p className="mt-3 max-w-xl text-[16px] leading-relaxed text-[var(--muted)]">
+          Paste a kick-off or coaching transcript. Get a rubric score, verified
+          evidence, and one clear improvement.
+        </p>
+      </div>
+      <div className="bm-fade-up bm-fade-up-delay-1 mt-10">
         <EvaluationForm rubrics={rubrics} />
       </div>
     </div>

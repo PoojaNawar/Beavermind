@@ -210,8 +210,11 @@ describe("consistency repair", () => {
     const result = buildKickoff(scores);
     const brief = briefSections(result);
     expect(brief.well.toLowerCase()).not.toMatch(/next.?step/);
+    expect(brief.well.length).toBeGreaterThan(40);
     expect(brief.held.toLowerCase()).toMatch(/next.?step/);
-    expect(brief.next.toLowerCase()).toMatch(/close the loop|next step/);
+    expect(brief.held).toMatch(/confirm|understanding/i);
+    expect(brief.next).toMatch(/diagnostic|film|upload|confirm/i);
+    expect(brief.next).not.toMatch(/^Close the loop/i);
   });
 
   it("full-mark Quick Fix has no body when evidence supports the score", () => {

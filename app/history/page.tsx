@@ -14,13 +14,17 @@ export default async function HistoryPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl">
-      <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-        History
-      </h1>
-      <p className="mt-3 max-w-2xl text-base leading-relaxed text-[var(--muted)]">
-        Completed and in-progress evaluations. Open a row to view the report.
-      </p>
-      <EvaluationHistory items={history} loadError={loadError} />
+      <div className="bm-fade-up">
+        <h1 className="font-display text-[40px] font-semibold tracking-[-0.03em] sm:text-[48px]">
+          History
+        </h1>
+        <p className="mt-3 max-w-2xl text-base leading-relaxed text-[var(--muted)]">
+          Completed and in-progress evaluations. Open a row to view the report.
+        </p>
+      </div>
+      <div className="bm-fade-up bm-fade-up-delay-1 mt-8">
+        <EvaluationHistory items={history} loadError={loadError} />
+      </div>
     </div>
   );
 }

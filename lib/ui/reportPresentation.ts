@@ -297,6 +297,10 @@ function gapPhrase(dim: DimensionResult, callType: string): string {
     if (dim.id === "d9") return "next-step clarity";
     if (dim.id === "d11") return "close and recap";
     if (dim.id === "d10") return "next-call booking";
+    if (dim.id === "d1") return "prep visibility";
+    if (dim.id === "d3") return "agenda framing";
+    if (dim.id === "d6") return "journey and expectation setting";
+    if (dim.id === "d7") return "support system clarity";
   }
   return dim.name.replace(/\s*&\s*/g, " and ").toLowerCase();
 }
@@ -313,37 +317,378 @@ function uniquePhrases(parts: string[]): string[] {
   return out;
 }
 
-function strengthPhrase(full: DimensionResult[], callType: string): string | null {
-  if (full.length === 0) return null;
-
-  if (callType === "coaching") {
-    const ids = new Set(full.map((d) => d.id));
-    const connection = ids.has("d1");
-    const instincts = ids.has("d8") || ids.has("d9");
-    const structure = ids.has("d12");
-    const parts: string[] = [];
-    if (connection && instincts) {
-      parts.push("Strong connection and coaching instincts");
-    } else if (connection) {
-      parts.push("Strong client connection");
-    } else if (instincts) {
-      parts.push("Strong coaching instincts");
-    }
-    if (structure && !connection) parts.push("clear session structure");
-    if (parts.length > 0) return parts.join(", with ");
-  }
-
+/** Short coach-facing strength labels for summary / well sections. */
+function strengthLabel(dim: DimensionResult, callType: string): string {
   if (callType === "kickoff") {
-    const ids = new Set(full.map((d) => d.id));
-    if (ids.has("d2") && ids.has("d4")) {
-      return "Strong rapport and goal alignment";
+    switch (dim.id) {
+      case "d1":
+        return "preparation";
+      case "d2":
+        return "rapport";
+      case "d3":
+        return "agenda framing";
+      case "d4":
+        return "goal alignment";
+      case "d5":
+        return "program explanation";
+      case "d6":
+        return "journey setting";
+      case "d7":
+        return "support clarity";
+      case "d8":
+        return "coaching intelligence";
+      case "d9":
+        return "next-step clarity";
+      case "d10":
+        return "follow-through";
+      case "d11":
+        return "close and recap";
+      case "d12":
+        return "call control";
     }
-    if (ids.has("d2")) return "Strong client connection";
-    if (ids.has("d1")) return "Clear preparation";
+  }
+  if (callType === "coaching") {
+    switch (dim.id) {
+      case "d1":
+        return "client connection";
+      case "d3":
+        return "vision";
+      case "d5":
+        return "adjustment framing";
+      case "d6":
+        return "accountability";
+      case "d7":
+        return "accountability anchor";
+      case "d8":
+        return "struggle handling";
+      case "d9":
+        return "close quality";
+      case "d10":
+        return "live booking";
+      case "d11":
+        return "continuity";
+      case "d12":
+        return "session structure";
+    }
+  }
+  return dim.name.replace(/\s*&\s*/g, " and ").toLowerCase();
+}
+
+function wellActionPhrase(dim: DimensionResult, callType: string): string {
+  if (callType === "kickoff") {
+    switch (dim.id) {
+      case "d2":
+        return "built strong rapport";
+      case "d4":
+        return "connected the program to the client's goals";
+      case "d5":
+        return "explained the program clearly";
+      case "d6":
+        return "explained the journey clearly";
+      case "d7":
+        return "established clear support and follow-up expectations";
+      case "d10":
+        return "booked the next call live";
+      case "d11":
+        return "closed with a clear recap";
+      case "d1":
+        return "showed visible preparation";
+      case "d3":
+        return "framed the agenda upfront";
+      case "d8":
+        return "asked insightful coaching questions";
+    }
+  }
+  if (callType === "coaching") {
+    switch (dim.id) {
+      case "d1":
+        return "built strong client connection";
+      case "d8":
+        return "handled struggle with skill";
+      case "d9":
+        return "closed the session cleanly";
+      case "d12":
+        return "kept clear session structure";
+      case "d3":
+        return "connected work to long-term vision";
+      case "d6":
+        return "set clear accountability";
+      case "d10":
+        return "booked the next call live";
+      case "d11":
+        return "set clear continuity";
+    }
+  }
+  return `delivered strong ${strengthLabel(dim, callType)}`;
+}
+
+function heldDetail(dim: DimensionResult, callType: string): string {
+  if (callType === "kickoff" && dim.id === "d9") {
+    return "The main gap was next-step clarity: the coach explained the diagnostic workflow and deadline, but did not fully confirm the client's understanding of what to do next.";
+  }
+  if (callType === "kickoff" && dim.id === "d4") {
+    return "The main gap was goal alignment: the emotional why was not fully stated back, confirmed, and locked to a concrete 30-day marker.";
+  }
+  if (callType === "kickoff" && dim.id === "d2") {
+    return "The main gap was rapport depth: connection stayed surface-level and did not fully return focus to the client's situation.";
+  }
+  if (callType === "kickoff" && dim.id === "d1") {
+    return "The main gap was prep visibility: intake details were not surfaced early enough to prove the coach arrived prepared.";
+  }
+  if (callType === "kickoff" && dim.id === "d3") {
+    return "The main gap was agenda framing: time, sequenced phases, and explicit client consent were not all secured upfront.";
+  }
+  if (callType === "kickoff" && dim.id === "d6") {
+    return "The main gap was journey and expectation setting: valleys and emotional friction were not prepared clearly enough.";
+  }
+  if (callType === "kickoff" && dim.id === "d11") {
+    return "The main gap was the close: the recap did not fully reconnect to the goal and next concrete step.";
+  }
+  if (callType === "coaching" && dim.id === "d10") {
+    return "The main gap was live next-call booking: the next session was not booked with a confirmed date and time before the call ended.";
+  }
+  if (callType === "coaching" && dim.id === "d3") {
+    return "The main gap was long-term vision: the current block was not clearly connected to a confirmed longer-term outcome.";
+  }
+  if (callType === "coaching" && (dim.id === "d6" || dim.id === "d7")) {
+    return "The main gap was accountability: ownership, deadlines, and confirmation were not fully locked in.";
+  }
+  if (callType === "coaching" && dim.id === "d11") {
+    return "The main gap was continuity: coach and client follow-up were not both clear on what, when, and through which channel.";
+  }
+  if (callType === "coaching" && dim.id === "d5") {
+    return "The main gap was adjustment framing: the change was not clearly framed as strategy that protects the long game.";
+  }
+  if (hasUnverifiedOnly(dim) && callType === "coaching" && dim.id === "d3") {
+    return "The main gap was a clearly verified long-term vision.";
+  }
+  return `The main gap was ${gapPhrase(dim, callType)}: verified evidence did not fully satisfy the elite criteria for this dimension.`;
+}
+
+function nextActionCopy(dim: DimensionResult, callType: string): string {
+  if (callType === "kickoff" && dim.id === "d9") {
+    return "Before closing, have the client confirm the diagnostic → film → upload sequence, including what needs to be completed and by when.";
+  }
+  if (callType === "kickoff" && dim.id === "d4") {
+    return "Before closing, state the emotional why back, name it as the North Star, and confirm a concrete 30-day marker the client agrees to.";
+  }
+  if (callType === "kickoff" && dim.id === "d2") {
+    return "Share a relevant personal moment, connect it to the client's situation, and return focus to their goals before moving on.";
+  }
+  if (callType === "kickoff" && dim.id === "d1") {
+    return "In the opening minutes, reference two specific intake details so preparation is immediately visible.";
+  }
+  if (callType === "kickoff" && dim.id === "d3") {
+    return "State the time, list three sequenced phases, and get an explicit yes before diving in.";
+  }
+  if (callType === "kickoff" && dim.id === "d6") {
+    return "Name the valleys ahead and separate good pain from bad pain so the client is emotionally ready.";
+  }
+  if (callType === "kickoff" && dim.id === "d11") {
+    return "Close with a specific recap that reconnects to the goal and the next concrete step.";
+  }
+  if (callType === "coaching" && dim.id === "d10") {
+    return "Before ending, choose the next date and time live, confirm it out loud, and send the calendar invite.";
+  }
+  if (callType === "coaching" && dim.id === "d3") {
+    return "Name the current training block, reconnect it to the long-term vision, and confirm how today's work serves that outcome.";
+  }
+  if (callType === "coaching" && (dim.id === "d6" || dim.id === "d7")) {
+    return "Leave with one client-owned deliverable, a deadline, spoken confirmation, and a clear miss consequence.";
+  }
+  if (callType === "coaching" && dim.id === "d11") {
+    return "Restate what the coach owes and what the client owes, with timing and channel, before ending the call.";
+  }
+  if (callType === "coaching" && dim.id === "d5") {
+    return "Frame the adjustment as strategy that protects the long game, and check that the client understands why it is the right move now.";
+  }
+  const one = actionOneThingForDimension(dim, callType);
+  return hideInternalIds(one.impact).replace(/\.?$/, ".");
+}
+
+function preferStrengthIds(
+  full: DimensionResult[],
+  preferred: string[],
+): DimensionResult[] {
+  const byId = new Map(full.map((d) => [d.id, d]));
+  const picked: DimensionResult[] = [];
+  for (const id of preferred) {
+    const dim = byId.get(id);
+    if (dim) picked.push(dim);
+  }
+  if (picked.length >= 2) return picked.slice(0, 4);
+  return full.slice(0, 4);
+}
+
+const GENERIC_SUMMARY =
+  /^(a call with mixed execution|mixed call|strong coaching|improve the coaching experience)\.?$/i;
+
+function isThinCopy(text: string): boolean {
+  const cleaned = hideInternalIds(text).trim();
+  if (cleaned.length < 24) return true;
+  if (GENERIC_SUMMARY.test(cleaned)) return true;
+  if (/^strong [a-z0-9 &]+?\.$/i.test(cleaned) && cleaned.split(/\s+/).length < 6) {
+    return true;
+  }
+  return false;
+}
+
+function buildWentWell(
+  full: DimensionResult[],
+  callType: string,
+): string {
+  if (full.length === 0) {
+    return "No scored dimension reached full marks on this call.";
   }
 
-  const names = full.slice(0, 2).map((d) => d.name.toLowerCase());
-  return `Strong ${joinHuman(names)}`;
+  const preferred =
+    callType === "kickoff"
+      ? preferStrengthIds(full, ["d2", "d4", "d6", "d7", "d5", "d10", "d11", "d1"])
+      : preferStrengthIds(full, ["d1", "d8", "d9", "d12", "d3", "d6", "d10", "d11"]);
+
+  const actions = uniquePhrases(
+    preferred.slice(0, 4).map((d) => wellActionPhrase(d, callType)),
+  );
+  if (actions.length === 0) {
+    return `Strong ${joinHuman(
+      full.slice(0, 3).map((d) => strengthLabel(d, callType)),
+    )}.`;
+  }
+  return `The coach ${joinHuman(actions)}.`;
+}
+
+function buildHeldBack(
+  missed: DimensionResult[],
+  callType: string,
+): string {
+  if (missed.length === 0) {
+    return "Nothing material held this score back.";
+  }
+  const primary = heldDetail(missed[0]!, callType);
+  if (missed.length === 1) return primary;
+
+  const extras = uniquePhrases(
+    missed.slice(1, 3).map((d) => gapPhrase(d, callType)),
+  );
+  if (extras.length === 0) return primary;
+  return `${primary.replace(/\.$/, "")}. Secondary gaps included ${joinHuman(extras)}.`;
+}
+
+function buildWhatNext(
+  missed: DimensionResult[],
+  callType: string,
+  refined: OneThing,
+): string {
+  if (missed.length === 0) {
+    return "Keep this standard on the next call and repeat the same level of evidence-backed coaching.";
+  }
+  const top = missed[0]!;
+  const specific = nextActionCopy(top, callType);
+  if (!isThinCopy(specific)) return specific;
+  const fromOne = hideInternalIds(refined.impact || refined.recommendation).trim();
+  if (fromOne.length >= 24) {
+    return fromOne.replace(/\.?$/, ".");
+  }
+  return `Focus on ${gapPhrase(top, callType)} before the next call.`;
+}
+
+function buildSummary(
+  full: DimensionResult[],
+  missed: DimensionResult[],
+  callType: string,
+): string {
+  if (missed.length === 0) {
+    return "Strong overall performance across every scored dimension. Keep repeating this level of evidence-backed coaching.";
+  }
+
+  const preferred =
+    callType === "kickoff"
+      ? preferStrengthIds(full, ["d2", "d4", "d5", "d10", "d6", "d7", "d1", "d11"])
+      : preferStrengthIds(full, ["d1", "d8", "d9", "d12", "d3", "d6", "d10"]);
+
+  const strengths = uniquePhrases(
+    preferred.slice(0, 4).map((d) => strengthLabel(d, callType)),
+  );
+
+  const top = missed[0]!;
+  let opportunity: string;
+  if (callType === "kickoff" && top.id === "d9") {
+    opportunity =
+      "The main opportunity is to make next-step instructions even clearer and confirm the client's understanding before closing the call.";
+  } else if (callType === "coaching" && top.id === "d10") {
+    opportunity =
+      "The main opportunity is to book the next call live with a confirmed date and time before ending the session.";
+  } else {
+    opportunity = `The main opportunity is to strengthen ${gapPhrase(top, callType)} before the next call.`;
+  }
+
+  if (strengths.length === 0) {
+    return `The score was held back by ${gapPhrase(top, callType)}. ${opportunity}`;
+  }
+
+  return `Strong overall performance with excellent ${joinHuman(strengths)}. ${opportunity}`;
+}
+
+function hasUnverifiedOnly(dim: DimensionResult): boolean {
+  return dim.verifiedEvidenceCount === 0 && dim.rejectedEvidenceCount > 0;
+}
+
+/**
+ * Validate that summary sections are non-empty, specific, and aligned
+ * with scored dimensions. Returns repaired copy when needed.
+ */
+export function validateBriefSections(
+  sections: BriefSections & { summary: string },
+  result: EvaluationResult,
+): BriefSections & { summary: string } {
+  const scored = scoredDimensions(result);
+  const full = scored.filter((d) => d.score === d.maxScore);
+  const missed = scored
+    .filter(isMissed)
+    .sort((a, b) => gapOf(b) - gapOf(a) || a.name.localeCompare(b.name));
+  const refined = refineOneThing(result);
+
+  let { summary, well, held, next } = sections;
+
+  if (isThinCopy(summary)) {
+    summary = buildSummary(full, missed, result.callType);
+  }
+  if (isThinCopy(well)) {
+    well = buildWentWell(full, result.callType);
+  }
+  if (isThinCopy(held)) {
+    held = buildHeldBack(missed, result.callType);
+  }
+  if (isThinCopy(next)) {
+    next = buildWhatNext(missed, result.callType, refined);
+  }
+
+  // Consistency: never praise a missed dimension in "went well".
+  for (const dim of missed.slice(0, 3)) {
+    const label = strengthLabel(dim, result.callType);
+    if (well.toLowerCase().includes(label) && missed.length > 0) {
+      well = buildWentWell(full, result.callType);
+      break;
+    }
+  }
+
+  // Consistency: held/next must reference an actual gap when one exists.
+  if (missed.length > 0) {
+    const topGap = gapPhrase(missed[0]!, result.callType);
+    const topLabel = strengthLabel(missed[0]!, result.callType);
+    const heldOk =
+      held.toLowerCase().includes(topGap.split(" ")[0]!) ||
+      held.toLowerCase().includes(topLabel.split(" ")[0]!) ||
+      /main gap|lacked|did not|missing|not fully/i.test(held);
+    if (!heldOk) held = buildHeldBack(missed, result.callType);
+  }
+
+  return {
+    summary: hideInternalIds(summary).replace(/\.?$/, ".").replace(/\.\.$/, "."),
+    well: hideInternalIds(well).replace(/\.?$/, ".").replace(/\.\.$/, "."),
+    held: hideInternalIds(held).replace(/\.?$/, ".").replace(/\.\.$/, "."),
+    next: hideInternalIds(next).replace(/\.?$/, ".").replace(/\.\.$/, "."),
+  };
 }
 
 export function scoreHeadline(result: EvaluationResult): string {
@@ -352,24 +697,15 @@ export function scoreHeadline(result: EvaluationResult): string {
   const missed = scored
     .filter(isMissed)
     .sort((a, b) => gapOf(b) - gapOf(a) || a.name.localeCompare(b.name));
-
-  if (missed.length === 0) {
-    return "Every scored dimension reached full marks on this call.";
-  }
-
-  const gaps = uniquePhrases(
-    missed.slice(0, 4).map((d) => gapPhrase(d, result.callType)),
-  ).slice(0, 3);
-  const strength = strengthPhrase(full, result.callType);
-
-  if (!strength) {
-    return `The score was held back by ${joinHuman(gaps)}.`;
-  }
-  return `${strength}, with meaningful gaps in ${joinHuman(gaps)}.`;
-}
-
-function hasUnverifiedOnly(dim: DimensionResult): boolean {
-  return dim.verifiedEvidenceCount === 0 && dim.rejectedEvidenceCount > 0;
+  return validateBriefSections(
+    {
+      summary: buildSummary(full, missed, result.callType),
+      well: "",
+      held: "",
+      next: "",
+    },
+    result,
+  ).summary;
 }
 
 export function briefSections(result: EvaluationResult): BriefSections {
@@ -378,45 +714,22 @@ export function briefSections(result: EvaluationResult): BriefSections {
   const missed = scored
     .filter(isMissed)
     .sort((a, b) => gapOf(b) - gapOf(a) || a.name.localeCompare(b.name));
-
-  const well =
-    full.length === 0
-      ? "No scored dimension reached full marks on this call."
-      : `Strong ${joinHuman(
-          uniquePhrases(
-            full.slice(0, 3).map((d) => {
-              if (result.callType === "coaching" && d.id === "d1") {
-                return "client connection";
-              }
-              if (d.id === "d8") return "struggle handling";
-              if (d.id === "d12") return "session structure";
-              if (result.callType === "coaching" && d.id === "d9") {
-                return "close quality";
-              }
-              return d.name.toLowerCase();
-            }),
-          ),
-        )}.`;
-
-  const heldParts = missed.slice(0, 3).map((d) => {
-    if (d.id === "d3" && hasUnverifiedOnly(d)) {
-      return "a clearly verified long-term vision";
-    }
-    return gapPhrase(d, result.callType);
-  });
-  const held =
-    missed.length === 0
-      ? "Nothing material held this score back."
-      : `The session lacked ${joinHuman(uniquePhrases(heldParts))}.`;
-
   const refined = refineOneThing(result);
+
+  const validated = validateBriefSections(
+    {
+      summary: buildSummary(full, missed, result.callType),
+      well: buildWentWell(full, result.callType),
+      held: buildHeldBack(missed, result.callType),
+      next: buildWhatNext(missed, result.callType, refined),
+    },
+    result,
+  );
+
   return {
-    well,
-    held,
-    next: hideInternalIds(firstSentence(refined.recommendation)).replace(
-      /\.?$/,
-      ".",
-    ),
+    well: validated.well,
+    held: validated.held,
+    next: validated.next,
   };
 }
 

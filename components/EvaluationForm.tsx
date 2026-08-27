@@ -23,7 +23,7 @@ const CALL_BLURBS: Record<CallType, string> = {
 };
 
 const inputClass =
-  "w-full rounded-xl border border-[var(--line)] bg-[var(--card)] px-4 py-3 text-[15px] outline-none placeholder:text-[var(--muted)]/55 focus:border-[var(--ink)]";
+  "w-full rounded-xl border border-[var(--line)] bg-[var(--card)] px-4 py-3 text-[15px] outline-none transition placeholder:text-[var(--muted)]/55 focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-soft)]";
 
 function displayOrDash(value: string): string {
   const trimmed = value.trim();
@@ -103,11 +103,16 @@ export function EvaluationForm({
   );
 
   return (
-    <form onSubmit={onSubmit} className="space-y-12">
-      <section className="space-y-6">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-          Evaluation setup
-        </h2>
+    <form onSubmit={onSubmit} className="space-y-10">
+      <section className="space-y-5">
+        <div>
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+            Who &amp; call type
+          </h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Set the people and rubric before pasting the transcript.
+          </p>
+        </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-2">
@@ -149,7 +154,7 @@ export function EvaluationForm({
             htmlFor="clientDetails"
             className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]"
           >
-            Context / Details
+            Context
           </label>
           <input
             id="clientDetails"
@@ -171,10 +176,10 @@ export function EvaluationForm({
               return (
                 <label
                   key={opt.id}
-                  className={`cursor-pointer rounded-xl border bg-[var(--card)] px-4 py-4 ${
+                  className={`cursor-pointer rounded-xl border bg-[var(--card)] px-4 py-4 transition ${
                     active
-                      ? "border-[var(--ink)]"
-                      : "border-[var(--line)] hover:border-[var(--ink)]/35"
+                      ? "border-[var(--accent)] shadow-[0_0_0_1px_var(--accent)]"
+                      : "border-[var(--line)] hover:border-[var(--accent)]/40"
                   }`}
                 >
                   <input
@@ -192,7 +197,7 @@ export function EvaluationForm({
                     <span
                       className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full border ${
                         active
-                          ? "border-[var(--ink)] bg-[var(--ink)]"
+                          ? "border-[var(--accent)] bg-[var(--accent)]"
                           : "border-[var(--line)]"
                       }`}
                       aria-hidden
@@ -201,30 +206,29 @@ export function EvaluationForm({
                   <p className="mt-2 text-sm leading-snug text-[var(--muted)]">
                     {CALL_BLURBS[opt.id]}
                   </p>
+                  {active ? (
+                    <p className="mt-3 text-xs text-[var(--muted)]">
+                      {opt.version} · {opt.dimensionCount} dimensions ·{" "}
+                      {opt.totalPoints} points
+                    </p>
+                  ) : null}
                 </label>
               );
             })}
           </div>
         </fieldset>
-
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-            Rubric
-          </p>
-          <p className="mt-2 text-[15px] font-medium tracking-tight">
-            {rubric.name} · {rubric.version}
-          </p>
-          <p className="mt-0.5 text-sm text-[var(--muted)]">
-            {rubric.dimensionCount} dimensions · {rubric.totalPoints} points
-          </p>
-        </div>
       </section>
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-            Call transcript
-          </h2>
+          <div>
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+              Transcript
+            </h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Paste the call, or upload a plain-text file.
+            </p>
+          </div>
           <span
             className={`text-[11px] tabular-nums text-[var(--muted)] ${
               overLimit ? "text-[var(--danger)]" : ""
@@ -237,14 +241,14 @@ export function EvaluationForm({
           id="transcript"
           value={transcript}
           onChange={(e) => setTranscript(e.target.value)}
-          rows={16}
+          rows={14}
           placeholder="Paste the call transcript here…"
-          className="min-h-[280px] w-full resize-y rounded-xl border border-[var(--line)] bg-[var(--card)] px-4 py-4 font-mono text-[13px] leading-relaxed text-[var(--ink)] outline-none placeholder:text-[var(--muted)]/55 focus:border-[var(--ink)]"
+          className="min-h-[260px] w-full resize-y rounded-xl border border-[var(--line)] bg-[var(--card)] px-4 py-4 font-mono text-[13px] leading-relaxed text-[var(--ink)] outline-none transition placeholder:text-[var(--muted)]/55 focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-soft)]"
           disabled={busy}
         />
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <label className="cursor-pointer text-sm font-medium text-[var(--ink)] underline-offset-4 hover:underline">
-            Paste transcript or upload a file
+          <label className="cursor-pointer text-sm font-medium text-[var(--accent)] underline-offset-4 hover:underline">
+            Upload .txt or .md
             <input
               type="file"
               accept=".txt,.md,.text,text/plain"
@@ -264,45 +268,12 @@ export function EvaluationForm({
               }}
             />
           </label>
-          <p className="text-xs text-[var(--muted)]">.txt or .md</p>
         </div>
         {overLimit && (
           <p className="text-sm text-[var(--danger)]">
             Transcript exceeds the maximum length.
           </p>
         )}
-      </section>
-
-      <section className="space-y-4 border-t border-[var(--line)] pt-8">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-          Evaluation summary
-        </h2>
-        <dl className="grid grid-cols-1 gap-x-8 gap-y-2.5 text-sm sm:grid-cols-2">
-          <div className="flex justify-between gap-4 sm:block">
-            <dt className="text-[var(--muted)]">Client</dt>
-            <dd className="font-medium sm:mt-0.5">{displayOrDash(clientName)}</dd>
-          </div>
-          <div className="flex justify-between gap-4 sm:block">
-            <dt className="text-[var(--muted)]">Coach</dt>
-            <dd className="font-medium sm:mt-0.5">{displayOrDash(coachName)}</dd>
-          </div>
-          <div className="flex justify-between gap-4 sm:block">
-            <dt className="text-[var(--muted)]">Call</dt>
-            <dd className="font-medium sm:mt-0.5">{rubric.name}</dd>
-          </div>
-          <div className="flex justify-between gap-4 sm:block">
-            <dt className="text-[var(--muted)]">Rubric</dt>
-            <dd className="font-medium sm:mt-0.5">{rubric.version}</dd>
-          </div>
-          <div className="flex justify-between gap-4 sm:block">
-            <dt className="text-[var(--muted)]">Dimensions</dt>
-            <dd className="font-medium sm:mt-0.5">{rubric.dimensionCount}</dd>
-          </div>
-          <div className="flex justify-between gap-4 sm:block">
-            <dt className="text-[var(--muted)]">Maximum score</dt>
-            <dd className="font-medium sm:mt-0.5">{rubric.totalPoints}</dd>
-          </div>
-        </dl>
       </section>
 
       {error && (
@@ -314,18 +285,21 @@ export function EvaluationForm({
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3 border-t border-[var(--line)] pt-8 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-[var(--muted)]">
+          {displayOrDash(clientName)}
+          {" · "}
+          {rubric.name}
+          {" · "}
+          {rubric.version}
+        </p>
         <button
           type="submit"
           disabled={busy || !canSubmit}
-          className="inline-flex w-full items-center justify-center rounded-xl bg-[var(--ink)] px-5 py-3 text-sm font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+          className="inline-flex w-full items-center justify-center rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--ink)] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
         >
-          {busy ? "Starting…" : "Run evaluation →"}
+          {busy ? "Starting…" : "Run evaluation"}
         </button>
-        <p className="text-xs leading-relaxed text-[var(--muted)]">
-          Overall score · dimension scores · verified evidence · red flags ·
-          quick fixes
-        </p>
       </div>
     </form>
   );

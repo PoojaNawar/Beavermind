@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links = [
-  { href: "/", label: "New evaluation" },
+  { href: "/", label: "Evaluate" },
   { href: "/history", label: "History" },
 ] as const;
 
@@ -12,7 +12,7 @@ export function AppNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex items-center gap-5" aria-label="Primary">
+    <nav className="flex items-center gap-1" aria-label="Primary">
       {links.map((link) => {
         const active =
           link.href === "/"
@@ -24,8 +24,8 @@ export function AppNav() {
             href={link.href}
             className={
               active
-                ? "text-sm font-semibold text-[var(--ink)]"
-                : "text-sm font-medium text-[var(--muted)] hover:text-[var(--ink)]"
+                ? "rounded-lg px-3 py-1.5 text-sm font-semibold text-[var(--ink)]"
+                : "rounded-lg px-3 py-1.5 text-sm font-medium text-[var(--muted)] transition hover:bg-[var(--accent-soft)]/60 hover:text-[var(--ink)]"
             }
           >
             {link.label}

@@ -1,26 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f3f1ec;
-  --bg-deep: #e8e5de;
-  --ink: #111111;
-  --muted: #6b6b6b;
-  --accent: #111111;
-  --accent-soft: #eceae4;
-  --danger: #c0392b;
+  --bg: #efece6;
+  --bg-deep: #e3dfd6;
+  --ink: #141210;
+  --muted: #6a655c;
+  --accent: #1f3d32;
+  --accent-soft: #e4ebe7;
+  --danger: #b42318;
   --danger-soft: #f8e8e6;
-  --warn: #c9a227;
-  --warn-soft: #f7f0d8;
-  --card: #ffffff;
-  --line: #e4e1da;
+  --warn: #9a7b1a;
+  --warn-soft: #f5efd8;
+  --card: #fbfaf7;
+  --line: #ddd8ce;
   --good: #2f6f4e;
   --good-soft: #e5f0e9;
-  --gold: #c4a035;
+  --gold: #a8892e;
+  --font-sans: var(--font-sans-loaded), "Segoe UI", sans-serif;
+  --font-display: var(--font-display-loaded), Georgia, "Times New Roman", serif;
 }
 
 @theme inline {
-  --font-sans: var(--font-sans-loaded), "Segoe UI", sans-serif;
-  --font-display: var(--font-sans-loaded), "Segoe UI", sans-serif;
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
   --color-bg: var(--bg);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
@@ -28,12 +30,85 @@
 }
 
 body {
-  background: var(--bg);
+  min-height: 100vh;
   color: var(--ink);
   font-family: var(--font-sans);
-  min-height: 100vh;
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 90% 55% at 12% -10%, rgba(31, 61, 50, 0.07), transparent 55%),
+    radial-gradient(ellipse 70% 45% at 100% 0%, rgba(168, 137, 46, 0.06), transparent 50%),
+    linear-gradient(180deg, #f4f1ea 0%, var(--bg) 38%, var(--bg-deep) 100%);
+  background-attachment: fixed;
+}
+
+body::before {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+.app-shell {
+  position: relative;
+  z-index: 1;
 }
 
 .font-display {
   font-family: var(--font-display);
+}
+
+@keyframes bm-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bm-score-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.bm-fade-up {
+  animation: bm-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.bm-fade-up-delay-1 {
+  animation-delay: 0.08s;
+}
+
+.bm-fade-up-delay-2 {
+  animation-delay: 0.16s;
+}
+
+.bm-fade-up-delay-3 {
+  animation-delay: 0.24s;
+}
+
+.bm-score-in {
+  animation: bm-score-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bm-fade-up,
+  .bm-fade-up-delay-1,
+  .bm-fade-up-delay-2,
+  .bm-fade-up-delay-3,
+  .bm-score-in {
+    animation: none;
+  }
 }

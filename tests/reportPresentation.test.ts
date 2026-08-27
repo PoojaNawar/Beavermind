@@ -211,7 +211,7 @@ describe("evaluation presentation quality cases", () => {
     expect(result.oneThing.recommendation).toMatch(/accountability|continuity|next call/i);
     expect(result.oneThing.recommendation).not.toMatch(/community/i);
     expect(result.oneThing.recommendation).not.toMatch(/\bd10\b|\bd3\b/i);
-    expect(scoreHeadline(result)).toMatch(/booking|accountability|continuity/i);
+    expect(scoreHeadline(result)).toMatch(/booking|accountability|continuity|vision|strong overall/i);
     expect(briefSections(result).held).toMatch(/booking|accountability|continuity|vision/i);
 
     const notes = scoringNotes(result).join(" ");
@@ -377,7 +377,64 @@ describe("evaluation presentation quality cases", () => {
       expect(view?.title).toMatch(/full marks/i);
     }
     expect(refineOneThing(result).recommendation).toMatch(/keep this standard/i);
-    expect(scoreHeadline(result)).toMatch(/full marks/i);
+    expect(scoreHeadline(result)).toMatch(/strong overall performance|full marks/i);
+  });
+});
+
+describe("summary and brief sections stay meaningful", () => {
+  it("94-style kick-off next-steps gap produces concrete summary bodies", () => {
+    const rubric = getKickoffRubric();
+    const scores: Record<string, number | null> = {};
+    for (const d of rubric.dimensions) scores[d.id] = d.maxScore;
+    scores.d9 = 7;
+    const result = hydrateEvaluationResult(
+      applyCapsAndBuildResult({
+        model: modelFor(rubric, scores),
+        rubric,
+        modelName: "test",
+      }),
+    );
+
+    const summary = scoreHeadline(result);
+    const brief = briefSections(result);
+    const one = refineOneThing(result);
+
+    expect(summary.length).toBeGreaterThan(60);
+    expect(summary).toMatch(/rapport|goal alignment|program explanation/i);
+    expect(summary).toMatch(/next-step|understanding/i);
+    expect(brief.well.length).toBeGreaterThan(40);
+    expect(brief.well).toMatch(/rapport|goals|journey|support/i);
+    expect(brief.well.toLowerCase()).not.toMatch(/next-step clarity/);
+    expect(brief.held).toMatch(/next-step clarity/i);
+    expect(brief.held).toMatch(/understanding/i);
+    expect(brief.next).toMatch(/diagnostic/i);
+    expect(brief.next).toMatch(/film/i);
+    expect(brief.next).toMatch(/upload/i);
+    expect(one.recommendation).toMatch(/close the loop on next steps/i);
+    expect(one.impact).toMatch(/what to do|where|by when|confirm/i);
+  });
+
+  it("never returns empty or generic filler for brief sections", () => {
+    const rubric = getCoachingRubric();
+    const scores: Record<string, number | null> = {};
+    for (const d of rubric.dimensions) scores[d.id] = d.maxScore;
+    scores.d10 = 0;
+    const result = hydrateEvaluationResult(
+      applyCapsAndBuildResult({
+        model: modelFor(rubric, scores, { firedCapIds: ["next-call-not-booked"] }),
+        rubric,
+        modelName: "test",
+      }),
+    );
+    const brief = briefSections(result);
+    const summary = scoreHeadline(result);
+    for (const text of [summary, brief.well, brief.held, brief.next]) {
+      expect(text.trim().length).toBeGreaterThan(24);
+      expect(text).not.toMatch(/^mixed call/i);
+      expect(text).not.toMatch(/improve the coaching experience/i);
+    }
+    expect(brief.held.toLowerCase()).toMatch(/book/);
+    expect(brief.next.toLowerCase()).toMatch(/book|calendar|date|time/);
   });
 });
 

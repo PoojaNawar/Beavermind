@@ -137,6 +137,7 @@ export async function buildEvaluationPdf(
       .text(pdfSafeText(result.grade.toUpperCase()));
     metaLine(`Based on ${result.scoreOutOf} applicable points`);
     doc.moveDown(0.25);
+    h2("Summary");
     body(headline);
 
     h2("One Thing");
