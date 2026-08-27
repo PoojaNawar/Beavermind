@@ -5,6 +5,9 @@ import { applyCapsAndBuildResult } from "@/lib/scoring/calculate";
 import { hydrateCompletedReport } from "@/lib/scoring/hydrateReport";
 import {
   coachingHasCheckInElite,
+  coachingHasLiveMovementCoaching,
+  coachingHasMovementElite,
+  coachingMovementScore,
   kickoffHasAgendaElite,
   kickoffHasDeepWhyElite,
   kickoffHasJourneyElite,
@@ -202,6 +205,54 @@ function dim(
     ...overrides,
   };
 }
+
+describe("coaching movement D4 repair", () => {
+  it("detects live movement coaching on coaching-01", () => {
+    expect(coachingHasLiveMovementCoaching(coaching01)).toBe(true);
+    expect(coachingHasMovementElite(coaching01)).toBe(true);
+    expect(coachingMovementScore(coaching01)).toBe(15);
+  });
+
+  it("re-enables D4 when the model wrongly disables it", () => {
+    const rubric = getCoachingRubric();
+    const model = stub(rubric, {
+      d1: 10,
+      d2: null,
+      d3: 10,
+      d4: null,
+      d5: 7,
+      d6: 10,
+      d7: 3,
+      d8: 5,
+      d9: 3,
+      d10: 0,
+      d11: 3,
+      d12: 5,
+    });
+    const d4 = model.dimensions.find((d) => d.id === "d4")!;
+    d4.disabled = true;
+    d4.notApplicable = true;
+    d4.disabledReason = "No movement coaching occurred in this call.";
+    d4.notApplicableReason = "No movement coaching occurred in this call.";
+    d4.score = null;
+
+    const d2 = model.dimensions.find((d) => d.id === "d2")!;
+    d2.notApplicable = true;
+    d2.score = null;
+
+    const result = applyCapsAndBuildResult({
+      model,
+      rubric,
+      modelName: "test",
+      transcript: coaching01,
+    });
+    const repaired = result.dimensions.find((d) => d.id === "d4")!;
+    expect(repaired.disabled).toBe(false);
+    expect(repaired.notApplicable).toBe(false);
+    expect(repaired.score).toBe(15);
+    expect(result.scoreOutOf).toBe(95);
+  });
+});
 
 describe("kickoff and coaching quick fixes", () => {
   it("renders kickoff next-steps as a clean workflow, not a broken separator", () => {

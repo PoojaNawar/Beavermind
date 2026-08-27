@@ -66,5 +66,5 @@ export const env = {
    * Older rows stay in the database but are hidden so the board starts clean.
    */
   historyStartedAt: () =>
-    first("HISTORY_STARTED_AT") ?? "2026-08-26T06:16:00.000Z",
+    first("HISTORY_STARTED_AT") ?? "2026-08-27T12:40:00.000Z",
 };

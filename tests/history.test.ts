@@ -78,10 +78,10 @@ describe("evaluation history display", () => {
 
   it("hides evaluations created before the history window", () => {
     expect(
-      isInHistoryWindow("2026-08-25T15:00:00.000Z", DEFAULT_HISTORY_STARTED_AT),
+      isInHistoryWindow("2026-08-26T15:00:00.000Z", DEFAULT_HISTORY_STARTED_AT),
     ).toBe(false);
     expect(
-      isInHistoryWindow("2026-08-26T06:16:00.000Z", DEFAULT_HISTORY_STARTED_AT),
+      isInHistoryWindow("2026-08-27T12:40:00.000Z", DEFAULT_HISTORY_STARTED_AT),
     ).toBe(true);
   });
 });

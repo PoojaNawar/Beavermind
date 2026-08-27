@@ -69,6 +69,17 @@ describe("deterministic cap detection", () => {
     );
   });
 
+  it("recognizes coaching-02 live booking with booking link and half six", () => {
+    const coaching02 = readFileSync(
+      path.join(process.cwd(), "transcripts/coaching-02.txt"),
+      "utf8",
+    );
+    expect(hasLiveNextCallBooking(coaching02)).toBe(true);
+    expect(detectDeterministicCapIds("coaching", coaching02)).not.toContain(
+      "next-call-not-booked",
+    );
+  });
+
   it("fires next-call-not-booked whenever live booking is absent", () => {
     const silentClose =
       "Great session today. Talk soon and keep posting in the community.";

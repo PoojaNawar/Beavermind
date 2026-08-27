@@ -105,6 +105,12 @@ export function kickoffHasNextStepsElite(transcript: string): boolean {
   );
 }
 
+export function kickoffHasProgramOutcomes(transcript: string): boolean {
+  return /(?:phase (?:1|one|2|two|3|three).{0,120}(?:about|means|is to|does|for)|outcome|for you specifically|maps onto|what each phase|builds? (?:capacity|trust|strength))/i.test(
+    transcript,
+  );
+}
+
 export function kickoffHasProgramElite(transcript: string): boolean {
   const phases =
     /retraining/i.test(transcript) &&
@@ -233,6 +239,179 @@ export function coachingHasContinuityElite(transcript: string): boolean {
   return coachFollowUp && timing && channel;
 }
 
+/** Live movement coaching occurred — D4 must be scored, not disabled. */
+export function coachingHasLiveMovementCoaching(transcript: string): boolean {
+  const liveSetup =
+    /get you (?:up and )?moving|on camera|camera angle|angle your camera|watch .{0,40}in real time|live (?:today|on camera)/i.test(
+      transcript,
+    );
+  const coachingExchange =
+    /(?:do (?:it|that) again|do (?:three|one|two|a few) more|from where I(?:'m| am) watching|set your feet|push(?:ing)? the ground|self-correct|cue(?:ing)? you|talk yourself through)/i.test(
+      transcript,
+    );
+  const movementNamed =
+    /split squat|step[- ]?down|deadlift|hinge|lunge|overhead press|hip drop|glute/i.test(
+      transcript,
+    );
+  return (
+    (liveSetup && (coachingExchange || movementNamed)) ||
+    (coachingExchange && movementNamed && /camera|live|rep/i.test(transcript))
+  );
+}
+
+export function coachingHasMovementElite(transcript: string): boolean {
+  if (!coachingHasLiveMovementCoaching(transcript)) return false;
+  const reflective =
+    /how(?:'d| did) that feel|tell me if|what do you (?:notice|feel)|talk yourself through|compared to when/i.test(
+      transcript,
+    );
+  const goalLink =
+    /(?:for|toward(?:s)?|back to) (?:your|that) (?:goal|duty|clearance)|ladder ops|unrestricted|full duty|north star|cleared for/i.test(
+      transcript,
+    );
+  const improvement =
+    /cleaner|self-correct|felt the difference|that(?:'s| is) the fix|noticeably|level too/i.test(
+      transcript,
+    );
+  return reflective && goalLink && improvement;
+}
+
+/** Discrete D4 score from transcript when the model wrongly disabled the dimension. */
+export function coachingMovementScore(transcript: string): number {
+  if (!coachingHasLiveMovementCoaching(transcript)) return 0;
+  if (coachingHasMovementElite(transcript)) return 15;
+  const reflective =
+    /how(?:'d| did) that feel|tell me if|what do you (?:notice|feel)|talk yourself through|compared to when/i.test(
+      transcript,
+    );
+  const goalLink =
+    /(?:for|toward(?:s)?|back to) (?:your|that) (?:goal|duty|clearance)|ladder ops|unrestricted|full duty|cleared for/i.test(
+      transcript,
+    );
+  if (reflective || goalLink) return 10;
+  return 5;
+}
+
+/** Short verbatim lines usable as D4 evidence after a false disable repair. */
+export function pickMovementEvidenceQuotes(transcript: string): string[] {
+  const patterns = [
+    /get you (?:up and )?moving/i,
+    /angle your camera|camera angle|on camera/i,
+    /how(?:'d| did) that feel|talk yourself through|compared to when/i,
+    /from where I(?:'m| am) watching|do (?:it|three|one) more|push(?:ing)? the ground/i,
+    /ladder ops|unrestricted|full duty|cleared for/i,
+  ];
+  const quotes: string[] = [];
+  for (const line of transcript.split(/\n+/)) {
+    const body = line.replace(/^\[[^\]]+\]:\s*/, "").trim();
+    if (body.length < 24 || body.length > 240) continue;
+    if (!patterns.some((p) => p.test(body))) continue;
+    if (quotes.some((q) => q === body)) continue;
+    quotes.push(body);
+    if (quotes.length >= 3) break;
+  }
+  return quotes;
+}
+
+/**
+ * If the model disables D4 despite live movement coaching in the transcript,
+ * re-enable and score from transcript signals. Never disables an already-scored D4.
+ */
+export function repairCoachingMovementDimension<
+  T extends {
+    id: string;
+    disabled: boolean;
+    disabledReason: string | null;
+    notApplicable: boolean;
+    notApplicableReason: string | null;
+    score: number | null;
+    rationale: string;
+    evidence: Array<{
+      quote: string;
+      speaker: string | null;
+      location: string | null;
+      demonstrated: boolean;
+      verificationStatus?: "verified" | "unverified" | "rejected";
+    }>;
+    quickFix: string;
+    notDemonstrated: boolean;
+  },
+>(dim: T, transcript: string): T {
+  if (dim.id !== "d4") return dim;
+  if (!transcript?.trim()) return dim;
+  if (!coachingHasLiveMovementCoaching(transcript)) return dim;
+
+  const wronglySkipped = dim.disabled || dim.notApplicable || dim.score === null;
+  if (!wronglySkipped) return dim;
+
+  const score = coachingMovementScore(transcript);
+  const quotes = pickMovementEvidenceQuotes(transcript);
+  const evidence =
+    quotes.length > 0
+      ? quotes.map((quote) => ({
+          quote,
+          speaker: null,
+          location: null,
+          demonstrated: true,
+          verificationStatus: "verified" as const,
+        }))
+      : dim.evidence;
+
+  const rationale =
+    score >= 15
+      ? "Live movement coaching included reflective questions, visible improvement, and a clear link to the client's goal."
+      : score >= 10
+        ? "Live movement coaching with cues is present; reflective exchange or goal link supports a Strong score."
+        : "Live movement coaching occurred, but the exchange stayed mostly instructional.";
+
+  return {
+    ...dim,
+    disabled: false,
+    disabledReason: null,
+    notApplicable: false,
+    notApplicableReason: null,
+    score,
+    notDemonstrated: false,
+    rationale,
+    quickFix:
+      score >= 15
+        ? ""
+        : "Coach the movement live, ask a reflective question, and link the improvement to the goal.",
+    evidence,
+  };
+}
+
+/**
+ * If the model scored D10 as 0 despite a live booking in the transcript,
+ * restore full marks. Never invents a booking that is not present.
+ */
+export function repairCoachingBookingDimension<
+  T extends {
+    id: string;
+    disabled: boolean;
+    notApplicable: boolean;
+    score: number | null;
+    rationale: string;
+    quickFix: string;
+    notDemonstrated: boolean;
+  },
+>(dim: T, transcript: string): T {
+  if (dim.id !== "d10") return dim;
+  if (!transcript?.trim()) return dim;
+  if (dim.disabled || dim.notApplicable) return dim;
+  if (!hasLiveNextCallBooking(transcript)) return dim;
+  if (dim.score === 5) return dim;
+
+  return {
+    ...dim,
+    score: 5,
+    notDemonstrated: false,
+    rationale:
+      "Next call was booked live with a confirmed date and time before the call ended.",
+    quickFix: "",
+  };
+}
+
 /**
  * If the model awarded Elite on a discrete dimension but the transcript is
  * missing a required elite item, snap to Strong. Never raises a score.
@@ -258,6 +437,14 @@ export function nextEliteScore(
     if (dimensionId === "d5" && score >= 9 && !kickoffHasProgramElite(transcript)) {
       return 8;
     }
+    if (
+      dimensionId === "d5" &&
+      score >= 8 &&
+      !kickoffHasProgramElite(transcript) &&
+      !kickoffHasProgramOutcomes(transcript)
+    ) {
+      return 7;
+    }
     if (dimensionId === "d6" && score >= 10 && !kickoffHasJourneyElite(transcript)) {
       return 7;
     }
@@ -278,6 +465,13 @@ export function nextEliteScore(
       return 7;
     }
     if (dimensionId === "d3" && score >= 15 && !coachingHasVisionElite(transcript)) {
+      return 10;
+    }
+    if (
+      dimensionId === "d4" &&
+      score >= 15 &&
+      !coachingHasMovementElite(transcript)
+    ) {
       return 10;
     }
     if (

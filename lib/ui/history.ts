@@ -1,7 +1,7 @@
 import type { CallType } from "@/lib/rubrics/types";
 import type { EvaluationStatus } from "@/lib/rubrics/types";
 
-export const DEFAULT_HISTORY_STARTED_AT = "2026-08-26T06:16:00.000Z";
+export const DEFAULT_HISTORY_STARTED_AT = "2026-08-27T12:40:00.000Z";
 
 export function isInHistoryWindow(
   createdAt: string,

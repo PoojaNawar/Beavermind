@@ -14,10 +14,17 @@ import {
 } from "@/lib/transcripts/evidenceQuality";
 import { refreshDimensionQuickFixes } from "@/lib/scoring/quickFix";
 import {
+  applyKickoffCloseCalibration,
+  filterKickoffTranscriptRedFlags,
   kickoffHasEliteClose,
   kickoffHasStructuredRecap,
 } from "@/lib/scoring/kickoffClose";
-import { nextEliteScore } from "@/lib/scoring/eliteBar";
+import {
+  nextEliteScore,
+  repairCoachingBookingDimension,
+  repairCoachingMovementDimension,
+} from "@/lib/scoring/eliteBar";
+import { hasLiveNextCallBooking } from "@/lib/scoring/detectCaps";
 import { capScoreWithoutVerifiedEvidence } from "@/lib/transcripts/evidencePolicy";
 import { computeScoreIfApplied } from "@/lib/scoring/scoreIfApplied";
 
@@ -119,6 +126,12 @@ export function applyCapsAndBuildResult(args: {
     return { ...d, score };
   });
 
+  if (rubric.id === "coaching" && transcript) {
+    for (let i = 0; i < working.length; i++) {
+      working[i] = repairCoachingMovementDimension(working[i]!, transcript);
+    }
+  }
+
   // Apply dimension-level caps / forced scores from model-reported + rule IDs
   const firedIds = new Set(model.firedCapIds);
   for (const cap of rubric.autoCaps) {
@@ -154,13 +167,14 @@ export function applyCapsAndBuildResult(args: {
   }
 
   // Kickoff D11: cap/restore from the transcript, not from rationale wording.
-  if (rubric.id === "kickoff") {
+  // D7/D12 floors are applied after the result object is built.
+  if (rubric.id === "kickoff" && transcript) {
     const d11 = working.find((d) => d.id === "d11");
     if (d11 && !d11.disabled && !d11.notApplicable && d11.score !== null) {
-      if (transcript && kickoffHasEliteClose(transcript)) {
+      if (kickoffHasEliteClose(transcript)) {
         d11.score = 5;
         d11.quickFix = "";
-      } else if (transcript && !kickoffHasStructuredRecap(transcript) && d11.score > 3) {
+      } else if (!kickoffHasStructuredRecap(transcript) && d11.score > 3) {
         d11.score = 3;
       }
     }
@@ -169,6 +183,19 @@ export function applyCapsAndBuildResult(args: {
   if (transcript) {
     for (const d of working) {
       d.score = nextEliteScore(rubric.id, d.id, d.score, transcript);
+    }
+  }
+
+  // After caps/elite bar: restore D10 when the transcript proves a live booking.
+  if (rubric.id === "coaching" && transcript) {
+    for (let i = 0; i < working.length; i++) {
+      working[i] = repairCoachingBookingDimension(working[i]!, transcript);
+    }
+    // Drop a false next-call-not-booked cap once booking is restored.
+    if (hasLiveNextCallBooking(transcript)) {
+      for (let i = firedCaps.length - 1; i >= 0; i--) {
+        if (firedCaps[i]?.id === "next-call-not-booked") firedCaps.splice(i, 1);
+      }
     }
   }
 
@@ -260,7 +287,7 @@ export function applyCapsAndBuildResult(args: {
 
   // Backend projection replaces the model's point-gain guess.
   const projection = computeScoreIfApplied(draft);
-  return {
+  let finalized: EvaluationResult = {
     ...draft,
     oneThing: {
       ...draft.oneThing,
@@ -268,6 +295,22 @@ export function applyCapsAndBuildResult(args: {
       scoreIfAppliedBasis: projection.scoreIfAppliedBasis,
     },
   };
+
+  if (transcript && rubric.id === "kickoff") {
+    finalized = applyKickoffCloseCalibration(finalized, transcript);
+    finalized = filterKickoffTranscriptRedFlags(finalized, transcript);
+    const again = computeScoreIfApplied(finalized);
+    finalized = {
+      ...finalized,
+      oneThing: {
+        ...finalized.oneThing,
+        scoreIfApplied: again.scoreIfApplied,
+        scoreIfAppliedBasis: again.scoreIfAppliedBasis,
+      },
+    };
+  }
+
+  return finalized;
 }
 
 /** Pure helpers for tests */

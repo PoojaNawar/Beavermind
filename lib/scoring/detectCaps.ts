@@ -15,7 +15,16 @@ export function hasNorthStarMention(transcript: string): boolean {
   return /north\s*star/i.test(transcript);
 }
 
-/** Live booking: verbal date/time confirmation (not "assistant will email times"). */
+const DAY =
+  /(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i;
+
+const CLOCK_TIME =
+  /(?:\d{1,2}\s*(?::\d{2})?\s*(?:am|pm)|\d{1,2}\s*o'?clock|half\s+(?:past\s+)?(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)|quarter\s+(?:past|to)\s+(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve))/i;
+
+/**
+ * Live booking: verbal date/time confirmation before hang-up
+ * (not "assistant will email times").
+ */
 export function hasLiveNextCallBooking(transcript: string): boolean {
   const deferral =
     /assistant handles the scheduling|she'll reach out|he'll reach out|reach out .{0,40}(with )?some times|grab whatever works/i.test(
@@ -23,15 +32,31 @@ export function hasLiveNextCallBooking(transcript: string): boolean {
     );
   if (deferral) return false;
 
-  const lockedLive =
-    /(?:next call|follow[- ]?up).{0,80}(?:lock|book|schedule).{0,60}(?:tuesday|wednesday|thursday|friday|monday|saturday|sunday|\d{1,2}\s*(?::\d{2})?\s*(?:am|pm))/i.test(
+  const classic =
+    /(?:next call|follow[- ]?up).{0,100}(?:lock|book|schedule).{0,80}(?:tuesday|wednesday|thursday|friday|monday|saturday|sunday|\d{1,2}\s*(?::\d{2})?\s*(?:am|pm)|half\s+)/i.test(
       transcript,
     ) ||
-    /(?:tuesday|wednesday|thursday|friday|monday).{0,40}\d{1,2}\s*(?::\d{2})?\s*(?:am|pm).{0,40}(?:work|confirm|perfect|sounds good|locked)/i.test(
+    /(?:tuesday|wednesday|thursday|friday|monday).{0,60}(?:\d{1,2}\s*(?::\d{2})?\s*(?:am|pm)|half\s+(?:past\s+)?(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)).{0,60}(?:work|confirm|perfect|sounds good|locked|booked)/i.test(
       transcript,
     );
 
-  return lockedLive;
+  // Booking-link flow: link dropped, client books, coach confirms day/time.
+  const linkFlow =
+    /booking link/i.test(transcript) &&
+    /(?:book(?:ed|ing) it now|there[,.]? done|it(?:'s| is) booked|done[,.]? it(?:'s| is) booked)/i.test(
+      transcript,
+    ) &&
+    DAY.test(transcript) &&
+    CLOCK_TIME.test(transcript) &&
+    /(?:locked in|we(?:'re| are) locked|confirm|that works)/i.test(transcript);
+
+  // British spoken time + explicit lock-in (e.g. "half six" + "We're locked in").
+  const britishLock =
+    DAY.test(transcript) &&
+    /half\s+(?:past\s+)?(?:five|six|seven|eight|nine)/i.test(transcript) &&
+    /(?:we(?:'re| are) locked in|locked in)/i.test(transcript);
+
+  return classic || linkFlow || britishLock;
 }
 
 export function detectDeterministicCapIds(

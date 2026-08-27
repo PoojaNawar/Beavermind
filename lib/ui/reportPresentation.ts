@@ -740,7 +740,8 @@ function copyForTheme(
   switch (theme) {
     case "accountability-loop":
       return {
-        recommendation: "Close the loop on accountability and continuity.",
+        recommendation:
+          "Book the next call and close the accountability loop before the session ends.",
         impact:
           "Booking the next call and confirming ownership before the session ends reduces ambiguity, strengthens accountability, and makes continuity between sessions much more reliable.",
       };
@@ -785,8 +786,12 @@ function recommendationMatchesTheme(recommendation: string, theme: LeverageTheme
     return /book(ing)? the next call|book(ed)? live|calendar invite/.test(rec);
   }
   if (theme === "accountability-loop") {
-    return /accountab|continuit|close the loop|book the next call|owner|deadline/.test(
-      rec,
+    return (
+      (/book(ing)? the next call|book(ed)? live|calendar invite|schedule/.test(
+        rec,
+      ) &&
+        /accountab|continuit|close the loop|owner|deadline|confirm/.test(rec)) ||
+      /book(ing)? the next call before/.test(rec)
     );
   }
   if (theme === "vision") {

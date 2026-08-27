@@ -1,7 +1,15 @@
 import { getRubric } from "@/lib/rubrics";
 import type { EvaluationResult } from "@/lib/rubrics/types";
-import { applyKickoffCloseCalibration } from "@/lib/scoring/kickoffClose";
-import { nextEliteScore } from "@/lib/scoring/eliteBar";
+import {
+  applyKickoffCloseCalibration,
+  filterKickoffTranscriptRedFlags,
+} from "@/lib/scoring/kickoffClose";
+import {
+  nextEliteScore,
+  repairCoachingBookingDimension,
+  repairCoachingMovementDimension,
+} from "@/lib/scoring/eliteBar";
+import { hasLiveNextCallBooking } from "@/lib/scoring/detectCaps";
 import { gradeFromScore, normalizeToHundred } from "@/lib/scoring/calculate";
 import { refreshDimensionQuickFixes } from "@/lib/scoring/quickFix";
 import {
@@ -9,7 +17,11 @@ import {
   rewriteUnverifiedRationale,
   EVIDENCE_INSUFFICIENT_NOTE,
 } from "@/lib/transcripts/evidencePolicy";
-import { hydrateEvaluationResult } from "@/lib/transcripts/evidenceQuality";
+import {
+  hydrateEvaluationResult,
+  summarizeDimensionEvidence,
+  summarizeReportEvidence,
+} from "@/lib/transcripts/evidenceQuality";
 
 function recalculateTotals(result: EvaluationResult): EvaluationResult {
   let raw = 0;
@@ -23,6 +35,46 @@ function recalculateTotals(result: EvaluationResult): EvaluationResult {
   const overallScore = normalizeToHundred(raw, scoreOutOf);
   const grade = gradeFromScore(overallScore, getRubric(result.callType));
   return { ...result, overallScore, scoreOutOf, grade };
+}
+
+function applyCoachingTranscriptRepairs(
+  result: EvaluationResult,
+  transcript: string | null | undefined,
+): EvaluationResult {
+  if (result.callType !== "coaching" || !transcript?.trim()) return result;
+
+  let changed = false;
+  const dimensions = result.dimensions.map((d) => {
+    let next = repairCoachingMovementDimension(d, transcript);
+    next = repairCoachingBookingDimension(next, transcript);
+    if (
+      next.disabled !== d.disabled ||
+      next.notApplicable !== d.notApplicable ||
+      next.score !== d.score
+    ) {
+      changed = true;
+      const quality = summarizeDimensionEvidence(
+        next.evidence,
+        next.notDemonstrated,
+      );
+      return { ...next, ...quality };
+    }
+    return d;
+  });
+  if (!changed) return result;
+  let withDims: EvaluationResult = {
+    ...result,
+    dimensions,
+    evidenceQuality: summarizeReportEvidence(dimensions),
+  };
+  withDims = recalculateTotals(withDims);
+  if (hasLiveNextCallBooking(transcript)) {
+    withDims = {
+      ...withDims,
+      firedCaps: withDims.firedCaps.filter((c) => c.id !== "next-call-not-booked"),
+    };
+  }
+  return withDims;
 }
 
 function applyEliteBarCalibration(
@@ -96,18 +148,22 @@ export function hydrateCompletedReport(
   result: EvaluationResult,
   transcript?: string | null,
 ): EvaluationResult {
-  const calibrated = applyEvidenceScoreCaps(
-    applyEliteBarCalibration(
-      applyKickoffCloseCalibration(result, transcript),
-      transcript,
-    ),
-  );
-  const hydrated = hydrateEvaluationResult(calibrated);
+  let next = applyKickoffCloseCalibration(result, transcript);
+  next = applyCoachingTranscriptRepairs(next, transcript);
+  next = applyEliteBarCalibration(next, transcript);
+  next = applyEvidenceScoreCaps(next);
+  // Re-apply kick-off floors after evidence caps (legacy rows may lack verified counts).
+  next = applyKickoffCloseCalibration(next, transcript);
+  next = filterKickoffTranscriptRedFlags(next, transcript);
+  next = hydrateEvaluationResult(next);
+  // Consistency/presentation can clear full-mark support; restore transcript floors last.
+  next = applyKickoffCloseCalibration(next, transcript);
+  next = filterKickoffTranscriptRedFlags(next, transcript);
   return {
-    ...hydrated,
+    ...next,
     dimensions: refreshDimensionQuickFixes(
-      hydrated.dimensions,
-      getRubric(hydrated.callType),
+      next.dimensions,
+      getRubric(next.callType),
     ),
   };
 }

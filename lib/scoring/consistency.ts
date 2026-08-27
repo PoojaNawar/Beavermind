@@ -136,6 +136,19 @@ export function evidenceSupportsFullMarks(
     return phases && goalTie;
   }
 
+  if (callType === "kickoff" && dim.id === "d7") {
+    const channel = /messag|app|email|chat/i.test(text);
+    const response = /same day|next morning|daily|get back|response/i.test(text);
+    const community = /community|group space/i.test(text);
+    return channel && (response || community);
+  }
+
+  if (callType === "kickoff" && dim.id === "d12") {
+    return /i(?:'ll| will) (?:build|send|look|review)|weekend|monday|program/i.test(
+      text,
+    );
+  }
+
   // Generic: verified support present is enough to keep full marks when
   // we cannot apply a dimension-specific elite check.
   return dim.verifiedEvidenceCount > 0 ? true : false;
@@ -348,6 +361,17 @@ export function filterConsistentRedFlags(
 ): { redFlags: RedFlag[]; repairs: string[] } {
   const repairs: string[] = [];
   const bookingOk = bookingSatisfied(result);
+  const d11 = result.dimensions.find((d) => d.id === "d11");
+  const recapLikely =
+    result.callType === "kickoff" &&
+    Boolean(
+      d11 &&
+        d11.score !== null &&
+        (d11.score >= 3 ||
+          /recap|upload by|videos uploaded|next steps/i.test(
+            verifiedBlob(d11),
+          )),
+    );
 
   const redFlags = result.redFlags
     .filter((flag) => {
@@ -360,6 +384,25 @@ export function filterConsistentRedFlags(
 
       if (bookingOk && BOOKING_FLAG_RE.test(blob)) {
         repairs.push("red flag removed: contradicts verified live booking");
+        return false;
+      }
+
+      if (
+        recapLikely &&
+        /(?:no |missing |without (?:a )?)(?:structured )?recap/i.test(blob)
+      ) {
+        repairs.push("red flag removed: contradicts structured recap evidence");
+        return false;
+      }
+
+      if (
+        /north star/i.test(blob) &&
+        /(?:missing|no north|never established|not constructed)/i.test(blob) &&
+        !/risk|retention|abandon|confused|unsafe/i.test(blob)
+      ) {
+        repairs.push(
+          "red flag removed: North Star miss is a scoring cap, not a red flag",
+        );
         return false;
       }
 
