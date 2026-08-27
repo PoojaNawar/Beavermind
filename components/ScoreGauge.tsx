@@ -68,6 +68,18 @@ export function ScoreGauge({
   );
 }
 
+const STRIP_MAX_PX = 40;
+const STRIP_MIN_SCORED_PX = 8;
+const STRIP_NA_PX = 12;
+
+function stripHeightPx(dim: DimensionResult): number {
+  if (dim.disabled || dim.notApplicable || dim.score === null) {
+    return STRIP_NA_PX;
+  }
+  const ratio = dimensionRatio(dim) ?? 0;
+  return Math.max(STRIP_MIN_SCORED_PX, Math.round(ratio * STRIP_MAX_PX));
+}
+
 export function ScoreStrip({
   dimensions,
   onSelect,
@@ -77,19 +89,29 @@ export function ScoreStrip({
 }) {
   return (
     <div
-      className="flex h-9 w-full items-end gap-1"
+      className="flex h-11 w-full items-end gap-1.5"
       role={onSelect ? "navigation" : undefined}
       aria-label={onSelect ? "Jump to dimension by score" : undefined}
     >
-      {dimensions.map((dim) => {
-        const ratio = dimensionRatio(dim);
+      {dimensions.map((dim, index) => {
+        const na = dim.disabled || dim.notApplicable || dim.score === null;
         const tone = dimensionTone(dim);
-        const label = `${dim.name} ${dim.score ?? "—"}/${dim.maxScore}`;
-        const style = {
-          height: `${Math.round((ratio ?? 0.18) * 36)}px`,
-          background: toneFill(tone),
-          opacity: tone === "muted" ? 0.45 : 0.9,
-        } as const;
+        const height = stripHeightPx(dim);
+        const label = na
+          ? `${index + 1}. ${dim.name} — not applicable`
+          : `${index + 1}. ${dim.name} ${dim.score}/${dim.maxScore}`;
+
+        const className = na
+          ? "min-w-0 flex-1 rounded-[3px] border border-dashed border-[var(--muted)]/45 bg-[var(--bg-deep)] transition hover:border-[var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--ink)]"
+          : "min-w-0 flex-1 rounded-[3px] transition hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--ink)]";
+
+        const style = na
+          ? { height: `${height}px` }
+          : {
+              height: `${height}px`,
+              background: toneFill(tone),
+              opacity: 0.92,
+            };
 
         if (onSelect) {
           return (
@@ -99,7 +121,7 @@ export function ScoreStrip({
               title={label}
               aria-label={`Go to ${label}`}
               onClick={() => onSelect(dim.id)}
-              className="min-w-0 flex-1 rounded-[3px] transition hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--ink)]"
+              className={className}
               style={style}
             />
           );
@@ -108,7 +130,11 @@ export function ScoreStrip({
         return (
           <div
             key={dim.id}
-            className="flex-1 rounded-[3px]"
+            className={
+              na
+                ? "min-w-0 flex-1 rounded-[3px] border border-dashed border-[var(--muted)]/45 bg-[var(--bg-deep)]"
+                : "min-w-0 flex-1 rounded-[3px]"
+            }
             title={label}
             style={style}
             aria-hidden

@@ -172,7 +172,7 @@ export function EvaluationReport({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[960px] space-y-10 sm:space-y-12">
+    <div className="mx-auto w-full max-w-[1040px] space-y-8 sm:space-y-9">
       <header className="bm-fade-up flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
@@ -221,32 +221,54 @@ export function EvaluationReport({
         </p>
       ) : null}
 
-      <section className="bm-score-in border-b border-[var(--line)] pb-10">
-        <p className="font-display text-[48px] font-semibold leading-none tracking-[-0.03em] sm:text-[56px]">
-          {report.overallScore}
-          <span className="text-[24px] font-medium text-[var(--muted)]">
-            {" "}
-            / 100
-          </span>
-        </p>
-        <p
-          className="mt-3 text-[11px] font-bold uppercase tracking-[0.18em]"
-          style={{ color: gradeTone(report.grade) }}
-        >
-          {report.grade}
-        </p>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Based on {report.scoreOutOf} applicable points
-        </p>
-        <h2 className="mt-7 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+      <section className="bm-score-in border-b border-[var(--line)] pb-8">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(240px,320px)] lg:items-end">
+          <div>
+            <p className="font-display text-[48px] font-semibold leading-none tracking-[-0.03em] sm:text-[56px]">
+              {report.overallScore}
+              <span className="text-[24px] font-medium text-[var(--muted)]">
+                {" "}
+                / 100
+              </span>
+            </p>
+            <p
+              className="mt-3 text-[11px] font-bold uppercase tracking-[0.18em]"
+              style={{ color: gradeTone(report.grade) }}
+            >
+              {report.grade}
+            </p>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Based on {report.scoreOutOf} applicable points
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+              Dimension scores
+            </p>
+            <div className="mt-3">
+              <ScoreStrip
+                dimensions={report.dimensions}
+                onSelect={(dimId) => {
+                  setFocusDimId(dimId);
+                  setFocusKey((k) => k + 1);
+                }}
+              />
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-[var(--muted)]">
+              {overview.summary}. Solid = scored · dashed = not applicable.
+              Click a bar to jump.
+            </p>
+          </div>
+        </div>
+        <h2 className="mt-8 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
           Summary
         </h2>
-        <p className="mt-2 max-w-3xl text-[16px] leading-relaxed text-[var(--ink)]">
+        <p className="mt-2 text-[16px] leading-relaxed text-[var(--ink)]">
           {headline}
         </p>
       </section>
 
-      <section className="bm-fade-up bm-fade-up-delay-1 border-b border-[var(--line)] pb-10">
+      <section className="bm-fade-up bm-fade-up-delay-1 border-b border-[var(--line)] pb-8">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
           One Thing
         </h2>
@@ -254,7 +276,7 @@ export function EvaluationReport({
           {report.oneThing.recommendation}
         </p>
         {report.oneThing.impact ? (
-          <p className="mt-3 max-w-3xl text-[16px] leading-relaxed text-[var(--muted)]">
+          <p className="mt-3 text-[16px] leading-relaxed text-[var(--muted)]">
             {report.oneThing.impact}
           </p>
         ) : null}
@@ -278,8 +300,8 @@ export function EvaluationReport({
         ) : null}
       </section>
 
-      <section className="bm-fade-up bm-fade-up-delay-2 border-b border-[var(--line)] pb-10">
-        <div className="grid gap-8 sm:grid-cols-3">
+      <section className="bm-fade-up bm-fade-up-delay-2 border-b border-[var(--line)] pb-8">
+        <div className="grid gap-6 sm:grid-cols-3 sm:gap-8">
           <div>
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
               What went well
@@ -311,50 +333,51 @@ export function EvaluationReport({
         </ReportSection>
       ) : null}
 
-      <section className="border-b border-[var(--line)] pb-8">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-          Evidence quality
-        </h2>
-        <p className="mt-2 text-[22px] font-semibold tabular-nums tracking-tight">
-          {quality.verified} / {quality.found} verified
-        </p>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          {quality.rejected} rejected
-          {` · ${quality.notDemonstratedDimensions} not demonstrated`}
-        </p>
-        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-[var(--muted)]">
-          Verified evidence is grounded in the original transcript. Rejected or
-          unverified evidence does not support scoring.
-        </p>
-      </section>
-
-      <section className="border-b border-[var(--line)] pb-8">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-          Red flags
-        </h2>
-        {report.redFlags.length > 0 ? (
-          <ul className="mt-3 space-y-4">
-            {report.redFlags.map((flag, i) => (
-              <li key={i} className="border-l-2 border-[var(--danger)] pl-4">
-                <h3 className="font-semibold text-[var(--danger)]">
-                  {flag.title}
-                </h3>
-                <p className="mt-1 text-sm leading-relaxed text-[var(--ink)]">
-                  {flag.explanation}
-                </p>
-                {flag.evidence ? (
-                  <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-                    Evidence: “{flag.evidence}”
-                  </p>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-2 text-[15px] font-medium text-[var(--muted)]">
-            None identified
+      <section className="grid gap-8 border-b border-[var(--line)] pb-8 sm:grid-cols-2">
+        <div>
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+            Evidence quality
+          </h2>
+          <p className="mt-2 text-[22px] font-semibold tabular-nums tracking-tight">
+            {quality.verified} / {quality.found} verified
           </p>
-        )}
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            {quality.rejected} rejected
+            {` · ${quality.notDemonstratedDimensions} not demonstrated`}
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
+            Verified evidence is grounded in the original transcript. Rejected
+            or unverified evidence does not support scoring.
+          </p>
+        </div>
+        <div>
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+            Red flags
+          </h2>
+          {report.redFlags.length > 0 ? (
+            <ul className="mt-3 space-y-4">
+              {report.redFlags.map((flag, i) => (
+                <li key={i} className="border-l-2 border-[var(--danger)] pl-4">
+                  <h3 className="font-semibold text-[var(--danger)]">
+                    {flag.title}
+                  </h3>
+                  <p className="mt-1 text-sm leading-relaxed text-[var(--ink)]">
+                    {flag.explanation}
+                  </p>
+                  {flag.evidence ? (
+                    <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+                      Evidence: “{flag.evidence}”
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-[15px] font-medium text-[var(--muted)]">
+              None identified
+            </p>
+          )}
+        </div>
       </section>
 
       {notes.length > 0 ? (
@@ -375,28 +398,13 @@ export function EvaluationReport({
       ) : null}
 
       <section className="border-t border-[var(--line)] pt-6">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-              Dimensions
-            </h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              {overview.total} evaluation dimensions
-            </p>
-            <p className="mt-0.5 text-sm text-[var(--ink)]">{overview.summary}</p>
-          </div>
-          <div className="w-full max-w-[280px] sm:w-[280px]">
-            <ScoreStrip
-              dimensions={report.dimensions}
-              onSelect={(dimId) => {
-                setFocusDimId(dimId);
-                setFocusKey((k) => k + 1);
-              }}
-            />
-            <p className="mt-1.5 text-[11px] text-[var(--muted)]">
-              Click a bar to jump to that dimension
-            </p>
-          </div>
+        <div className="mb-3">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+            Dimensions
+          </h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            {overview.total} evaluation dimensions · {overview.summary}
+          </p>
         </div>
         <DimensionAccordion
           dimensions={report.dimensions}

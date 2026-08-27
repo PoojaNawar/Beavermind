@@ -42,7 +42,7 @@ function QuickFixBlock({
         {quickFix.title}
       </p>
       {quickFix.body ? (
-        <p className="mt-2 max-w-prose text-[15px] leading-relaxed text-[var(--ink)]">
+        <p className="mt-2 text-[15px] leading-relaxed text-[var(--ink)]">
           {quickFix.body}
         </p>
       ) : null}
@@ -252,7 +252,7 @@ export function DimensionAccordion({
                   <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
                     Judge assessment
                   </h4>
-                  <p className="mt-2 max-w-prose text-[15px] leading-relaxed text-[var(--ink)]">
+                  <p className="mt-2 text-[15px] leading-relaxed text-[var(--ink)]">
                     {assessment}
                   </p>
                   {!na && evidenceUi.explanation ? (
