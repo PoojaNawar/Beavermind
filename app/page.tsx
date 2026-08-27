@@ -26,11 +26,12 @@ export default function HomePage() {
           BeaverMind
         </p>
         <h1 className="mt-4 text-[22px] font-semibold tracking-tight text-[var(--ink)] sm:text-[26px]">
-          Judge the call with evidence.
+          Evaluate the conversation with rubric-backed evidence.
         </h1>
         <p className="mt-3 max-w-xl text-[16px] leading-relaxed text-[var(--muted)]">
-          Paste a kick-off or coaching transcript. Get a rubric score, verified
-          evidence, and one clear improvement.
+          Paste a call transcript. BeaverMind evaluates the conversation against
+          a structured rubric, shows the evidence behind each score, and
+          identifies the most useful next step.
         </p>
       </div>
       <div className="bm-fade-up bm-fade-up-delay-1 mt-10">

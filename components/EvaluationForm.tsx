@@ -17,9 +17,9 @@ export interface RubricSummary {
 
 const CALL_BLURBS: Record<CallType, string> = {
   kickoff:
-    "Onboarding, rapport, goals, expectations, and first-week plan.",
+    "How well did the coach understand the client, set expectations, and establish clear next steps?",
   coaching:
-    "Connection, diagnostics, coaching intelligence, and next-step action.",
+    "How well did the coach explore the problem, ask useful questions, and help the client move forward?",
 };
 
 const inputClass =
@@ -107,10 +107,10 @@ export function EvaluationForm({
       <section className="space-y-5">
         <div>
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-            Who &amp; call type
+            Call details
           </h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Set the people and rubric before pasting the transcript.
+            Add a little context so we can evaluate the conversation correctly.
           </p>
         </div>
 
@@ -126,7 +126,7 @@ export function EvaluationForm({
               id="clientName"
               value={clientName}
               onChange={(e) => setClientName(e.target.value)}
-              placeholder="Client name"
+              placeholder="Who was the client?"
               disabled={busy}
               className={inputClass}
             />
@@ -142,7 +142,7 @@ export function EvaluationForm({
               id="coachName"
               value={coachName}
               onChange={(e) => setCoachName(e.target.value)}
-              placeholder="Coach name"
+              placeholder="Who led the conversation?"
               disabled={busy}
               className={inputClass}
             />
@@ -160,7 +160,7 @@ export function EvaluationForm({
             id="clientDetails"
             value={clientDetails}
             onChange={(e) => setClientDetails(e.target.value)}
-            placeholder="Optional — cohort, week, or notes"
+            placeholder="Optional — add anything that could help us interpret the conversation."
             disabled={busy}
             className={inputClass}
           />
@@ -168,7 +168,7 @@ export function EvaluationForm({
 
         <fieldset>
           <legend className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-            Call type
+            Conversation type
           </legend>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {callTypes.map((opt) => {
@@ -223,10 +223,10 @@ export function EvaluationForm({
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-              Transcript
+              Call transcript
             </h2>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              Paste the call, or upload a plain-text file.
+              Paste the transcript below or upload a .txt or .md file.
             </p>
           </div>
           <span
@@ -242,7 +242,7 @@ export function EvaluationForm({
           value={transcript}
           onChange={(e) => setTranscript(e.target.value)}
           rows={14}
-          placeholder="Paste the call transcript here…"
+          placeholder="Paste the conversation here…"
           className="min-h-[260px] w-full resize-y rounded-xl border border-[var(--line)] bg-[var(--card)] px-4 py-4 font-mono text-[13px] leading-relaxed text-[var(--ink)] outline-none transition placeholder:text-[var(--muted)]/55 focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-soft)]"
           disabled={busy}
         />
