@@ -283,16 +283,18 @@ function humanBasis(result: EvaluationResult, lifts: Map<string, number>): strin
   const names = [...lifts.keys()]
     .map((id) => dimById(result, id)?.name)
     .filter((n): n is string => Boolean(n));
+  const suffix =
+    "Illustrative projection based on the current dimension score.";
   if (names.length === 0) {
     return "No additional points are available from The One Thing.";
   }
   if (names.length === 1) {
-    return `Projected if ${names[0]} reached full marks.`;
+    return `Assumes ${names[0]} reaches full marks. ${suffix}`;
   }
   if (names.length === 2) {
-    return `Projected if ${names[0]} and ${names[1]} reached full marks.`;
+    return `Assumes ${names[0]} and ${names[1]} reach full marks. ${suffix}`;
   }
-  return `Projected if ${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]} reached full marks.`;
+  return `Assumes ${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]} reach full marks. ${suffix}`;
 }
 
 /**

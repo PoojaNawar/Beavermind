@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DimensionResult, EvaluationResult, EvidenceItem } from "@/lib/rubrics/types";
 import {
   dimensionEvidenceUi,
@@ -8,17 +8,14 @@ import {
   isVerifiedEvidence,
 } from "@/lib/transcripts/evidenceQuality";
 import {
-  dimensionImpact,
+  dimensionStatusLabel,
   evidenceItemLabel,
-  impactLabel,
   notApplicableCopy,
   scoreExplanation,
 } from "@/lib/ui/reportPresentation";
-import {
-  dimensionTone,
-  scorePillClass,
-} from "@/lib/ui/scoreTone";
 import { presentQuickFix } from "@/lib/ui/quickFixDisplay";
+
+const QUOTE_PREVIEW_CHARS = 160;
 
 function QuickFixBlock({
   dim,
@@ -31,21 +28,21 @@ function QuickFixBlock({
   if (!quickFix) return null;
 
   return (
-    <section className="mt-5 border-t border-[var(--line)] pt-4">
+    <section className="mt-6 border-t border-[var(--line)] pt-5">
       <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
         Quick fix
       </h4>
       <p
-        className={`mt-2 text-sm font-semibold tracking-tight ${
+        className={`mt-2 tracking-tight ${
           quickFix.complete
-            ? "text-[var(--muted)]"
-            : "uppercase tracking-[0.04em] text-[var(--ink)]"
+            ? "text-sm font-medium text-[var(--muted)]"
+            : "text-[17px] font-semibold leading-snug text-[var(--ink)] sm:text-[18px]"
         }`}
       >
-        {quickFix.complete ? "Full marks reached" : quickFix.title}
+        {quickFix.title}
       </p>
       {quickFix.body ? (
-        <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-[var(--ink)]">
+        <p className="mt-2 max-w-prose text-[15px] leading-relaxed text-[var(--ink)]">
           {quickFix.body}
         </p>
       ) : null}
@@ -60,7 +57,7 @@ function QuickFixBlock({
   );
 }
 
-function EvidenceRow({
+function EvidenceQuote({
   ev,
   kind,
 }: {
@@ -69,9 +66,19 @@ function EvidenceRow({
 }) {
   const meta = evidenceItemLabel(kind);
   const muted = kind !== "verified";
+  const full =
+    kind === "not_demonstrated"
+      ? ev.quote
+      : `${ev.speaker ? `${ev.speaker}: ` : ""}“${ev.quote}”`;
+  const needsCollapse = full.length > QUOTE_PREVIEW_CHARS;
+  const [expanded, setExpanded] = useState(false);
+  const shown =
+    needsCollapse && !expanded
+      ? `${full.slice(0, QUOTE_PREVIEW_CHARS).trimEnd()}…`
+      : full;
 
   return (
-    <li className="max-w-prose text-[14px] leading-relaxed">
+    <li className="min-w-0">
       <p
         className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${
           kind === "verified"
@@ -81,17 +88,26 @@ function EvidenceRow({
               : "text-[var(--muted)]"
         }`}
       >
-        {meta.mark} {meta.label}
+        {meta.mark} {meta.label.toUpperCase()}
       </p>
-      {kind === "not_demonstrated" ? (
-        <p className="mt-1 text-[var(--muted)]">{ev.quote}</p>
-      ) : (
-        <p className={`mt-1 ${muted ? "text-[#8a6a12]" : "text-[var(--ink)]"}`}>
-          {ev.speaker ? `${ev.speaker}: ` : ""}
-          “{ev.quote}”
-        </p>
-      )}
-      <p className="mt-0.5 text-xs text-[var(--muted)]">{meta.hint}</p>
+      <blockquote
+        className={`mt-1.5 border-l-2 pl-3 text-[14px] leading-relaxed break-words ${
+          muted
+            ? "border-[#d4b84a]/50 text-[#8a6a12]"
+            : "border-[var(--line)] text-[var(--ink)]"
+        }`}
+      >
+        {shown}
+      </blockquote>
+      {needsCollapse ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-1 text-xs font-medium text-[var(--muted)] underline-offset-2 hover:text-[var(--ink)] hover:underline"
+        >
+          {expanded ? "Show less" : "Show full quote"}
+        </button>
+      ) : null}
     </li>
   );
 }
@@ -114,13 +130,28 @@ export function DimensionAccordion({
   dimensions,
   callType,
   firedResult,
+  focusId,
+  focusKey = 0,
 }: {
   dimensions: DimensionResult[];
   callType: string;
   firedResult: EvaluationResult;
+  focusId?: string | null;
+  focusKey?: number;
 }) {
   const seed = useMemo(() => initialOpenIds(dimensions), [dimensions]);
   const [openIds, setOpenIds] = useState<Set<string>>(seed);
+
+  useEffect(() => {
+    if (!focusId) return;
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      next.add(focusId);
+      return next;
+    });
+    const el = document.getElementById(`dim-${focusId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [focusId, focusKey]);
 
   function toggle(id: string) {
     setOpenIds((prev) => {
@@ -137,10 +168,10 @@ export function DimensionAccordion({
         const open = openIds.has(dim.id);
         const na = notApplicableCopy(dim);
         const scoreLabel = na
-          ? "Not applicable"
-          : `${dim.score}/${dim.maxScore}`;
+          ? "NOT APPLICABLE"
+          : `${dim.score} / ${dim.maxScore}`;
         const evidenceUi = dimensionEvidenceUi(dim);
-        const impact = dimensionImpact(dim, firedResult);
+        const status = dimensionStatusLabel(dim, firedResult);
         const verifiedItems = dim.evidence.filter(isVerifiedEvidence);
         const unverifiedItems = dim.evidence.filter(isUnverifiedEvidence);
         const ndItems = dim.evidence.filter(
@@ -148,84 +179,103 @@ export function DimensionAccordion({
         );
         const hasEvidence =
           verifiedItems.length + unverifiedItems.length + ndItems.length > 0;
-        const preview = na
-          ? na.explanation
-          : scoreExplanation(dim);
+        const assessment = na ? na.explanation : scoreExplanation(dim);
+        const evidenceCountParts: string[] = [];
+        if (verifiedItems.length > 0) {
+          evidenceCountParts.push(`${verifiedItems.length} verified`);
+        }
+        if (unverifiedItems.length > 0) {
+          evidenceCountParts.push(`${unverifiedItems.length} unverified`);
+        }
+        if (ndItems.length > 0) {
+          evidenceCountParts.push(`${ndItems.length} not demonstrated`);
+        }
 
         return (
           <article
             key={dim.id}
             id={`dim-${dim.id}`}
-            className="scroll-mt-8 border-t border-[var(--line)]"
+            className="scroll-mt-10 border-t border-[var(--line)]"
           >
             <button
               type="button"
               aria-expanded={open}
               onClick={() => toggle(dim.id)}
-              className="flex w-full items-start justify-between gap-3 py-4 text-left"
+              className="flex w-full items-start justify-between gap-3 py-5 text-left"
             >
               <div className="min-w-0">
-                <h3 className="text-[16px] font-semibold tracking-tight">
+                <h3 className="text-[17px] font-semibold tracking-tight sm:text-[18px]">
                   <span className="text-[var(--muted)]">{index + 1}.</span>{" "}
                   {dim.name}
                 </h3>
-                {impact ? (
-                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-                    {impactLabel(impact)}
+                <p className="mt-1.5 text-[20px] font-semibold tabular-nums tracking-tight">
+                  {scoreLabel}
+                </p>
+                {status ? (
+                  <p
+                    className={`mt-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] ${
+                      status === "CRITICAL"
+                        ? "text-[var(--danger)]"
+                        : status === "FULL MARKS"
+                          ? "text-[var(--good)]"
+                          : "text-[var(--muted)]"
+                    }`}
+                  >
+                    {status}
                   </p>
                 ) : null}
                 {!open ? (
-                  <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-[var(--muted)]">
-                    {preview}
+                  <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-[var(--muted)]">
+                    {assessment}
                   </p>
                 ) : null}
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${scorePillClass(dimensionTone(dim))}`}
-                >
-                  {scoreLabel}
-                </span>
-                <svg
-                  viewBox="0 0 16 16"
-                  className={`h-4 w-4 text-[var(--muted)] transition-transform ${open ? "rotate-180" : ""}`}
-                  fill="none"
-                  aria-hidden
-                >
-                  <path
-                    d="M4 6.5 8 10.5 12 6.5"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
+              <svg
+                viewBox="0 0 16 16"
+                className={`mt-1 h-4 w-4 shrink-0 text-[var(--muted)] transition-transform ${open ? "rotate-180" : ""}`}
+                fill="none"
+                aria-hidden
+              >
+                <path
+                  d="M4 6.5 8 10.5 12 6.5"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </button>
 
             {open ? (
-              <div className="pb-5">
-                <p className="max-w-prose text-[15px] leading-relaxed text-[var(--ink)]">
-                  {preview}
-                </p>
-
-                {!na && evidenceUi.explanation ? (
-                  <p
-                    className={`mt-2 text-xs ${
-                      evidenceUi.tone === "warning" ||
-                      evidenceUi.tone === "caution"
-                        ? "text-[#8a6a12]"
-                        : "text-[var(--muted)]"
-                    }`}
-                  >
-                    {evidenceUi.label}
-                    {` — ${evidenceUi.explanation}`}
+              <div className="pb-6">
+                <section>
+                  <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                    Judge assessment
+                  </h4>
+                  <p className="mt-2 max-w-prose text-[15px] leading-relaxed text-[var(--ink)]">
+                    {assessment}
                   </p>
-                ) : null}
+                  {!na && evidenceUi.explanation ? (
+                    <p
+                      className={`mt-2 text-xs ${
+                        evidenceUi.tone === "warning" ||
+                        evidenceUi.tone === "caution"
+                          ? "text-[#8a6a12]"
+                          : "text-[var(--muted)]"
+                      }`}
+                    >
+                      {evidenceUi.label}
+                      {` — ${evidenceUi.explanation}`}
+                    </p>
+                  ) : null}
+                </section>
 
-                <section className="mt-5">
+                <section className="mt-6">
                   <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
                     Evidence
+                    {evidenceCountParts.length > 0
+                      ? ` · ${evidenceCountParts.join(" · ")}`
+                      : ""}
                   </h4>
                   {!hasEvidence ? (
                     <p className="mt-2 text-sm text-[var(--muted)]">
@@ -234,19 +284,19 @@ export function DimensionAccordion({
                         : "No transcript evidence attached."}
                     </p>
                   ) : (
-                    <ul className="mt-3 space-y-3">
+                    <ul className="mt-3 space-y-4">
                       {verifiedItems.map((ev, i) => (
-                        <EvidenceRow key={`v-${i}`} ev={ev} kind="verified" />
+                        <EvidenceQuote key={`v-${i}`} ev={ev} kind="verified" />
                       ))}
                       {unverifiedItems.map((ev, i) => (
-                        <EvidenceRow
+                        <EvidenceQuote
                           key={`u-${i}`}
                           ev={ev}
                           kind="unverified"
                         />
                       ))}
                       {ndItems.map((ev, i) => (
-                        <EvidenceRow
+                        <EvidenceQuote
                           key={`nd-${i}`}
                           ev={ev}
                           kind="not_demonstrated"

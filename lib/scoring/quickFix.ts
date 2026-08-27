@@ -8,7 +8,7 @@ import { sanitizeQuickFixTypography } from "@/lib/ui/quickFixTypography";
 const GENERIC_QUICK_FIX =
   /^(improve communication|build( more)? rapport|be more empathetic|do better|try harder|be a better listener|improve your coaching)\.?$/i;
 
-export const FULL_MARKS_QUICK_FIX = "Full marks were reached.";
+export const FULL_MARKS_QUICK_FIX = "Full marks reached.";
 
 const TRAILING_FRAGMENT =
   /\b(and|with|the|a|an|to|for|of|or|that|this|as|by|from|but|if|when|while|then)\s*$/i;
@@ -21,6 +21,13 @@ export function isIncompleteQuickFix(text: string): boolean {
   if (!cleaned) return true;
   if (/[!']{2,}|\s!['’]/.test(text)) return true;
   if (/,\s*$/.test(cleaned) || /:\s*$/.test(cleaned)) return true;
+  const openParens = (cleaned.match(/\(/g) || []).length;
+  const closeParens = (cleaned.match(/\)/g) || []).length;
+  if (openParens !== closeParens) return true;
+  if (/\([^)]*$/.test(cleaned)) return true;
+  if (/\b(goals|details|steps|phases|owners?)\s*$/i.test(cleaned) && !/[.!?]$/.test(cleaned)) {
+    return true;
+  }
   const stripped = cleaned.replace(/["')\]]+$/, "");
   if (TRAILING_FRAGMENT.test(stripped)) return true;
   return false;
@@ -64,7 +71,7 @@ export function isUnusableQuickFix(
     return true;
   }
   if (
-    /full marks were reached|already at full marks|no change needed|no quick fix|not scored on this call/i.test(
+    /full marks (were )?reached|already at full marks|no change needed|no quick fix|not scored on this call/i.test(
       normalized,
     )
   ) {

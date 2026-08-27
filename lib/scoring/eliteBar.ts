@@ -9,6 +9,36 @@
 import type { CallType } from "@/lib/rubrics/types";
 import { hasLiveNextCallBooking } from "@/lib/scoring/detectCaps";
 
+export function kickoffHasAgendaElite(transcript: string): boolean {
+  const time =
+    /\b\d{1,3}\s*(?:min(?:ute)?s?)\b/i.test(transcript) ||
+    /\b(?:fifteen|twenty(?:[- ]five)?|thirty(?:[- ]five)?|forty(?:[- ]five)?|forty|sixty)\s+minutes?\b/i.test(
+      transcript,
+    ) ||
+    /minutes together|about .{0,20}minutes/i.test(transcript);
+  const thenCount = (transcript.match(/\bthen\b/gi) || []).length;
+  const sequenced =
+    (/first/i.test(transcript) && thenCount >= 2) ||
+    (/(?:first|1[.\)\:]|phase\s*one)/i.test(transcript) &&
+      /(?:second|2[.\)\:]|phase\s*two)/i.test(transcript) &&
+      /(?:third|3[.\)\:]|phase\s*three|finally|last)/i.test(transcript)) ||
+    (thenCount >= 2 &&
+      /agenda|shape of it|today we(?:'ll| will)|walk (?:you )?through|three phases|get into it/i.test(
+        transcript,
+      ));
+  const consent =
+    /(?:does that (?:work|sound)|sound(?:s)? (?:good|ok|okay)|work for you|are you (?:ok|okay|good with)|shall we|before we (?:dive|start))/i.test(
+      transcript,
+    ) ||
+    /\b(?:yes|yep|yeah)[,.]?\b.{0,40}(?:sounds good|that works|perfect|let'?s)/i.test(
+      transcript,
+    ) ||
+    /\b(?:sounds good|that works|perfect|let'?s do (?:it|that))\b/i.test(
+      transcript,
+    );
+  return time && sequenced && consent;
+}
+
 export function kickoffHasJourneyElite(transcript: string): boolean {
   const valley = /week three|week 3|week four|week 4|\bvalley\b/i.test(transcript);
   const foundational =
@@ -218,6 +248,9 @@ export function nextEliteScore(
   if (callType === "kickoff") {
     if (dimensionId === "d2" && score >= 10 && !kickoffHasRapportElite(transcript)) {
       return 7;
+    }
+    if (dimensionId === "d3" && score >= 4.5 && !kickoffHasAgendaElite(transcript)) {
+      return 3;
     }
     if (dimensionId === "d4" && score >= 15 && !kickoffHasDeepWhyElite(transcript)) {
       return 10;

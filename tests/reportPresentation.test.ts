@@ -8,6 +8,8 @@ import { presentQuickFix } from "@/lib/ui/quickFixDisplay";
 import {
   briefSections,
   dimensionImpact,
+  dimensionOverview,
+  dimensionStatusLabel,
   hideInternalIds,
   refineOneThing,
   scoreHeadline,
@@ -77,6 +79,7 @@ describe("incomplete Quick Fix rejection", () => {
     expect(isIncompleteQuickFix("Confirm the diagnostic !' film !' upload")).toBe(
       true,
     );
+    expect(isIncompleteQuickFix("Name two intake details (goals")).toBe(true);
     expect(
       isIncompleteQuickFix(
         "Give the client one clear deliverable, assign an owner and deadline, and confirm what happens if the commitment is missed.",
@@ -218,10 +221,18 @@ describe("evaluation presentation quality cases", () => {
 
     const d10 = result.dimensions.find((d) => d.id === "d10")!;
     expect(dimensionImpact(d10, result)).toBe("critical");
+    expect(dimensionStatusLabel(d10, result)).toBe("CRITICAL");
     const d7 = result.dimensions.find((d) => d.id === "d7")!;
     expect(dimensionImpact(d7, result)).toBe("high");
+    expect(dimensionStatusLabel(d7, result)).toBe("OPPORTUNITY");
     const d5 = result.dimensions.find((d) => d.id === "d5")!;
     expect(dimensionImpact(d5, result)).toBe("opportunity");
+    expect(dimensionStatusLabel(d5, result)).toBe("OPPORTUNITY");
+
+    const overview = dimensionOverview(result);
+    expect(overview.summary).toMatch(/strong/);
+    expect(overview.critical).toBeGreaterThan(0);
+    expect(overview.total).toBe(result.dimensions.length);
   });
 
   it("5. N/A dimensions do not penalize the score or look like the coach turned them off", () => {

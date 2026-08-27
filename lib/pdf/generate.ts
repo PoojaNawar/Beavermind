@@ -6,8 +6,7 @@ import { quickFixForPdf } from "@/lib/ui/quickFixTypography";
 import { pdfSafeText } from "@/lib/pdf/text";
 import {
   briefSections,
-  dimensionImpact,
-  impactLabel,
+  dimensionStatusLabel,
   notApplicableCopy,
   scoreExplanation,
   scoreHeadline,
@@ -147,7 +146,11 @@ export async function buildEvaluationPdf(
     }
     if (result.oneThing.scoreIfApplied !== null) {
       body(
-        `If applied: ${result.oneThing.scoreIfApplied}/100 — ${result.oneThing.scoreIfAppliedBasis}`,
+        `Potential score if this gap were fully addressed: ${result.oneThing.scoreIfApplied}/100`,
+      );
+      body(
+        result.oneThing.scoreIfAppliedBasis ||
+          "Illustrative projection based on the current dimension score.",
       );
     } else if (result.oneThing.scoreIfAppliedBasis) {
       body(result.oneThing.scoreIfAppliedBasis);
@@ -194,15 +197,6 @@ export async function buildEvaluationPdf(
     h2("What to do next");
     body(brief.next);
 
-    if (result.redFlags.length > 0) {
-      h2("Red Flags");
-      for (const flag of result.redFlags) {
-        ensureSpace(60);
-        doc.fillColor(ink).font("Helvetica-Bold").fontSize(10).text(pdfSafeText(flag.title));
-        body(flag.explanation);
-      }
-    }
-
     h2("Evidence quality");
     body(
       `${result.evidenceQuality.verified} / ${result.evidenceQuality.found} verified`,
@@ -210,7 +204,24 @@ export async function buildEvaluationPdf(
     metaLine(
       `${result.evidenceQuality.rejected} rejected  ·  ${result.evidenceQuality.notDemonstratedDimensions} not demonstrated`,
     );
+    body(
+      "Verified evidence is grounded in the original transcript. Rejected or unverified evidence does not support scoring.",
+    );
     doc.moveDown(0.3);
+
+    h2("Red Flags");
+    if (result.redFlags.length > 0) {
+      for (const flag of result.redFlags) {
+        ensureSpace(60);
+        doc.fillColor(ink).font("Helvetica-Bold").fontSize(10).text(pdfSafeText(flag.title));
+        body(flag.explanation);
+        if (flag.evidence) {
+          metaLine(`Evidence: "${flag.evidence}"`);
+        }
+      }
+    } else {
+      body("None identified");
+    }
 
     if (notes.length > 0) {
       h2("Scoring notes");
@@ -226,8 +237,8 @@ export async function buildEvaluationPdf(
     for (const [index, dim] of result.dimensions.entries()) {
       ensureSpace(120);
       const na = notApplicableCopy(dim);
-      const scoreLabel = na ? "Not applicable" : `${dim.score}/${dim.maxScore}`;
-      const impact = dimensionImpact(dim, result);
+      const scoreLabel = na ? "NOT APPLICABLE" : `${dim.score} / ${dim.maxScore}`;
+      const status = dimensionStatusLabel(dim, result);
 
       doc
         .fillColor(ink)
@@ -238,10 +249,12 @@ export async function buildEvaluationPdf(
         .fillColor(muted)
         .text(pdfSafeText(`    ${scoreLabel}`));
 
-      if (impact) {
-        metaLine(impactLabel(impact).toUpperCase());
+      if (status) {
+        metaLine(status);
       }
 
+      doc.fillColor(muted).font("Helvetica-Bold").fontSize(9).text("JUDGE ASSESSMENT");
+      doc.moveDown(0.15);
       body(na ? na.explanation : scoreExplanation(dim));
 
       const verified = dim.evidence.filter((e) => e.verificationStatus === "verified");
@@ -250,7 +263,21 @@ export async function buildEvaluationPdf(
         (e) => e.verificationStatus === "not_demonstrated",
       );
 
-      doc.fillColor(muted).font("Helvetica-Bold").fontSize(9).text("EVIDENCE");
+      const evidenceBits: string[] = [];
+      if (verified.length) evidenceBits.push(`${verified.length} verified`);
+      if (unverified.length) evidenceBits.push(`${unverified.length} unverified`);
+      if (ndItems.length) evidenceBits.push(`${ndItems.length} not demonstrated`);
+      doc
+        .fillColor(muted)
+        .font("Helvetica-Bold")
+        .fontSize(9)
+        .text(
+          pdfSafeText(
+            evidenceBits.length > 0
+              ? `EVIDENCE · ${evidenceBits.join(" · ")}`
+              : "EVIDENCE",
+          ),
+        );
       doc.moveDown(0.15);
       if (verified.length === 0 && unverified.length === 0 && ndItems.length === 0) {
         body(na ? "This dimension was not scored." : "No transcript evidence attached.");
@@ -293,9 +320,7 @@ export async function buildEvaluationPdf(
           .font("Helvetica-Bold")
           .fontSize(10)
           .text(
-            quickFixForPdf(
-              quickFix.complete ? "Full marks reached" : quickFix.title,
-            ),
+            quickFixForPdf(quickFix.title),
           );
         if (quickFix.body) {
           doc.moveDown(0.12);

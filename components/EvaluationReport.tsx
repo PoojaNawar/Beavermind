@@ -9,6 +9,7 @@ import type {
 import { hydrateEvaluationResult } from "@/lib/transcripts/evidenceQuality";
 import {
   briefSections,
+  dimensionOverview,
   scoringNotes,
   scoreHeadline,
 } from "@/lib/ui/reportPresentation";
@@ -76,6 +77,8 @@ export function EvaluationReport({
 }) {
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [focusDimId, setFocusDimId] = useState<string | null>(null);
+  const [focusKey, setFocusKey] = useState(0);
 
   if (
     status === "pending" ||
@@ -134,6 +137,7 @@ export function EvaluationReport({
   const headline = scoreHeadline(report);
   const quality = report.evidenceQuality;
   const pillars = coachingPillars(report);
+  const overview = dimensionOverview(report);
 
   async function downloadPdf() {
     setPdfError(null);
@@ -168,7 +172,7 @@ export function EvaluationReport({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[720px] space-y-8 sm:space-y-10">
+    <div className="mx-auto w-full max-w-[960px] space-y-8 sm:space-y-10">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
@@ -234,12 +238,12 @@ export function EvaluationReport({
         <p className="mt-2 text-sm text-[var(--muted)]">
           Based on {report.scoreOutOf} applicable points
         </p>
-        <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-[var(--ink)]">
+        <p className="mt-4 max-w-3xl text-[15px] leading-relaxed text-[var(--ink)]">
           {headline}
         </p>
       </section>
 
-      <section>
+      <section className="border-b border-[var(--line)] pb-8">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
           One Thing
         </h2>
@@ -247,21 +251,23 @@ export function EvaluationReport({
           {report.oneThing.recommendation}
         </p>
         {report.oneThing.impact ? (
-          <p className="mt-3 max-w-prose text-[15px] leading-relaxed text-[var(--muted)]">
+          <p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-[var(--muted)]">
             {report.oneThing.impact}
           </p>
         ) : null}
         {report.oneThing.scoreIfApplied !== null ? (
-          <p className="mt-3 text-sm leading-relaxed text-[var(--ink)]">
-            If applied:{" "}
-            <span className="font-semibold tabular-nums">
-              {report.oneThing.scoreIfApplied}/100
-            </span>
-            <span className="text-[var(--muted)]">
-              {" "}
-              — {report.oneThing.scoreIfAppliedBasis}
-            </span>
-          </p>
+          <div className="mt-3 space-y-1">
+            <p className="text-sm leading-relaxed text-[var(--ink)]">
+              Potential score if this gap were fully addressed:{" "}
+              <span className="font-semibold tabular-nums">
+                {report.oneThing.scoreIfApplied}/100
+              </span>
+            </p>
+            <p className="text-sm text-[var(--muted)]">
+              {report.oneThing.scoreIfAppliedBasis ||
+                "Illustrative projection based on the current dimension score."}
+            </p>
+          </div>
         ) : report.oneThing.scoreIfAppliedBasis ? (
           <p className="mt-3 text-sm text-[var(--muted)]">
             {report.oneThing.scoreIfAppliedBasis}
@@ -269,32 +275,28 @@ export function EvaluationReport({
         ) : null}
       </section>
 
-      <ReportSection
-        title="Brief"
-        summary={`${brief.well} ${brief.held}`}
-        defaultOpen={false}
-      >
-        <div className="grid gap-5 sm:grid-cols-3">
+      <section className="border-b border-[var(--line)] pb-8">
+        <div className="grid gap-8 sm:grid-cols-3">
           <div>
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
               What went well
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed">{brief.well}</p>
+            </h2>
+            <p className="mt-2 text-[15px] leading-relaxed">{brief.well}</p>
           </div>
           <div>
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
               What held the score back
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed">{brief.held}</p>
+            </h2>
+            <p className="mt-2 text-[15px] leading-relaxed">{brief.held}</p>
           </div>
           <div>
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
               What to do next
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed">{brief.next}</p>
+            </h2>
+            <p className="mt-2 text-[15px] leading-relaxed">{brief.next}</p>
           </div>
         </div>
-      </ReportSection>
+      </section>
 
       {pillars.length > 0 ? (
         <ReportSection
@@ -306,43 +308,51 @@ export function EvaluationReport({
         </ReportSection>
       ) : null}
 
-      {report.redFlags.length > 0 ? (
-        <ReportSection
-          title="Red flags"
-          summary={report.redFlags.map((f) => f.title).join(" · ")}
-          defaultOpen
-        >
-          <ul className="space-y-3">
-            {report.redFlags.map((flag, i) => (
-              <li
-                key={i}
-                className="rounded-xl border border-[var(--danger)]/15 bg-[var(--card)] px-4 py-3"
-              >
-                <h3 className="font-semibold text-[var(--danger)]">
-                  {flag.title}
-                </h3>
-                <p className="mt-1 text-sm leading-relaxed">{flag.explanation}</p>
-              </li>
-            ))}
-          </ul>
-        </ReportSection>
-      ) : null}
-
-      <ReportSection
-        title="Evidence quality"
-        summary={`${quality.verified} / ${quality.found} verified · ${quality.rejected} rejected`}
-        defaultOpen={false}
-      >
-        <p className="text-[22px] font-semibold tabular-nums tracking-tight">
+      <section className="border-b border-[var(--line)] pb-8">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+          Evidence quality
+        </h2>
+        <p className="mt-2 text-[22px] font-semibold tabular-nums tracking-tight">
           {quality.verified} / {quality.found} verified
         </p>
         <p className="mt-1 text-sm text-[var(--muted)]">
           {quality.rejected} rejected
-          {quality.notDemonstratedDimensions > 0
-            ? ` · ${quality.notDemonstratedDimensions} not demonstrated`
-            : ""}
+          {` · ${quality.notDemonstratedDimensions} not demonstrated`}
         </p>
-      </ReportSection>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-[var(--muted)]">
+          Verified evidence is grounded in the original transcript. Rejected or
+          unverified evidence does not support scoring.
+        </p>
+      </section>
+
+      <section className="border-b border-[var(--line)] pb-8">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+          Red flags
+        </h2>
+        {report.redFlags.length > 0 ? (
+          <ul className="mt-3 space-y-4">
+            {report.redFlags.map((flag, i) => (
+              <li key={i} className="border-l-2 border-[var(--danger)] pl-4">
+                <h3 className="font-semibold text-[var(--danger)]">
+                  {flag.title}
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-[var(--ink)]">
+                  {flag.explanation}
+                </p>
+                {flag.evidence ? (
+                  <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+                    Evidence: “{flag.evidence}”
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-[15px] font-medium text-[var(--muted)]">
+            None identified
+          </p>
+        )}
+      </section>
 
       {notes.length > 0 ? (
         <ReportSection
@@ -362,23 +372,35 @@ export function EvaluationReport({
       ) : null}
 
       <section className="border-t border-[var(--line)] pt-6">
-        <div className="mb-2 flex flex-wrap items-end justify-between gap-4">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
               Dimensions
             </h2>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              {report.dimensions.length} evaluation dimensions · expand to review
+              {overview.total} evaluation dimensions
             </p>
+            <p className="mt-0.5 text-sm text-[var(--ink)]">{overview.summary}</p>
           </div>
-          <div className="w-full max-w-[220px] sm:w-[220px]">
-            <ScoreStrip dimensions={report.dimensions} />
+          <div className="w-full max-w-[280px] sm:w-[280px]">
+            <ScoreStrip
+              dimensions={report.dimensions}
+              onSelect={(dimId) => {
+                setFocusDimId(dimId);
+                setFocusKey((k) => k + 1);
+              }}
+            />
+            <p className="mt-1.5 text-[11px] text-[var(--muted)]">
+              Click a bar to jump to that dimension
+            </p>
           </div>
         </div>
         <DimensionAccordion
           dimensions={report.dimensions}
           callType={report.callType}
           firedResult={report}
+          focusId={focusDimId}
+          focusKey={focusKey}
         />
       </section>
 

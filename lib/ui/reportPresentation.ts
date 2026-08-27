@@ -5,6 +5,10 @@ import type {
   OneThing,
 } from "@/lib/rubrics/types";
 import {
+  actionOneThingForDimension,
+  repairEvaluationConsistency,
+} from "@/lib/scoring/consistency";
+import {
   computeScoreIfApplied,
   resolveLeverageTheme,
   type LeverageTheme,
@@ -88,7 +92,7 @@ export function notApplicableCopy(dim: DimensionResult): NotApplicableCopy | nul
       explanation:
         dim.notApplicableReason?.trim() ||
         (dim.id === "d2"
-          ? "Diagnostics review did not occur in this cycle, so this dimension was not scored."
+          ? "No diagnostics review occurred during this cycle, so this dimension was not scored."
           : "This dimension did not apply to the current call, so it was not scored."),
     };
   }
@@ -100,6 +104,73 @@ export function notApplicableCopy(dim: DimensionResult): NotApplicableCopy | nul
       (dim.id === "d4"
         ? "Movement coaching did not occur on this call, so this dimension was not scored."
         : "This dimension did not apply to the current call, so it was not scored."),
+  };
+}
+
+/** Status chip for dimension cards — FULL MARKS / OPPORTUNITY / CRITICAL / NOT APPLICABLE. */
+export function dimensionStatusLabel(
+  dim: DimensionResult,
+  result: EvaluationResult,
+): string | null {
+  const na = notApplicableCopy(dim);
+  if (na) return "NOT APPLICABLE";
+  if (dim.score !== null && dim.score >= dim.maxScore) return "FULL MARKS";
+  const impact = dimensionImpact(dim, result);
+  if (impact === "critical") return "CRITICAL";
+  if (impact) return "OPPORTUNITY";
+  return null;
+}
+
+export type DimensionOverview = {
+  total: number;
+  strong: number;
+  opportunities: number;
+  critical: number;
+  notApplicable: number;
+  summary: string;
+};
+
+/** Dynamic dimension strip summary: "10 strong · 2 opportunities". */
+export function dimensionOverview(result: EvaluationResult): DimensionOverview {
+  let strong = 0;
+  let opportunities = 0;
+  let critical = 0;
+  let notApplicable = 0;
+
+  for (const dim of result.dimensions) {
+    if (dim.disabled || dim.notApplicable) {
+      notApplicable += 1;
+      continue;
+    }
+    if (dim.score === null) continue;
+    if (dim.score >= dim.maxScore) {
+      strong += 1;
+      continue;
+    }
+    const impact = dimensionImpact(dim, result);
+    if (impact === "critical") critical += 1;
+    else opportunities += 1;
+  }
+
+  const parts: string[] = [];
+  if (strong > 0) parts.push(`${strong} strong`);
+  if (opportunities > 0) {
+    parts.push(
+      `${opportunities} ${opportunities === 1 ? "opportunity" : "opportunities"}`,
+    );
+  }
+  if (critical > 0) parts.push(`${critical} critical`);
+  if (notApplicable > 0) {
+    parts.push(`${notApplicable} not applicable`);
+  }
+
+  return {
+    total: result.dimensions.length,
+    strong,
+    opportunities,
+    critical,
+    notApplicable,
+    summary: parts.length > 0 ? parts.join(" · ") : "No scored dimensions",
   };
 }
 
@@ -145,7 +216,7 @@ export function impactLabel(level: ImpactLevel): string {
     case "critical":
       return "Critical";
     case "high":
-      return "High impact";
+      return "Opportunity";
     case "opportunity":
       return "Opportunity";
   }
@@ -384,10 +455,7 @@ function copyForTheme(
         .sort((a, b) => gapOf(b) - gapOf(a));
       const top = missed[0];
       if (!top) return null;
-      return {
-        recommendation: `Raise ${top.name} before the next call.`,
-        impact: `This was the largest meaningful score gap on this evaluation, and closing it would most improve the client experience.`,
-      };
+      return actionOneThingForDimension(top, result.callType);
     }
     default:
       return {
@@ -480,17 +548,13 @@ export function refineOneThing(result: EvaluationResult): OneThing {
 export function applyReportPresentation(
   result: EvaluationResult,
 ): EvaluationResult {
+  const { result: consistent } = repairEvaluationConsistency(result);
+  const oneThing = refineOneThing(consistent);
   return {
-    ...result,
-    oneThing: refineOneThing(result),
-    brief: hideInternalIds(result.brief),
-    redFlags: result.redFlags.map((flag) => ({
-      ...flag,
-      title: hideInternalIds(flag.title),
-      explanation: hideInternalIds(flag.explanation),
-      evidence: hideInternalIds(flag.evidence),
-    })),
-    dimensions: result.dimensions.map((dim) => ({
+    ...consistent,
+    oneThing,
+    brief: hideInternalIds(consistent.brief),
+    dimensions: consistent.dimensions.map((dim) => ({
       ...dim,
       rationale: hideInternalIds(dim.rationale),
       disabledReason: dim.disabledReason
@@ -513,7 +577,7 @@ export function evidenceItemLabel(status: string): {
       return {
         mark: "✓",
         label: "Verified",
-        hint: "Evidence appears in transcript.",
+        hint: "Grounded in the original transcript.",
       };
     case "unverified":
       return {
@@ -525,7 +589,7 @@ export function evidenceItemLabel(status: string): {
       return {
         mark: "×",
         label: "Rejected",
-        hint: "Evidence was rejected and should not support the score.",
+        hint: "Rejected evidence does not support scoring.",
       };
     default:
       return {

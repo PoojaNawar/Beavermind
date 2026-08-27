@@ -34,7 +34,7 @@ function verified(quote: string): EvidenceItem {
 }
 
 describe("presentQuickFix", () => {
-  it("shows Full marks were reached on a perfect dimension", () => {
+  it("shows Full marks reached on a perfect dimension", () => {
     const view = presentQuickFix(
       dim({
         id: "d1",
@@ -46,7 +46,7 @@ describe("presentQuickFix", () => {
       "kickoff",
     );
     expect(view).toEqual({
-      title: "Full marks were reached.",
+      title: "Full marks reached",
       body: null,
       steps: null,
       complete: true,

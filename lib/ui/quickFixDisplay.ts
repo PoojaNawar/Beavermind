@@ -1,12 +1,7 @@
 import type { DimensionResult } from "@/lib/rubrics/types";
 import {
-  FULL_MARKS_QUICK_FIX,
   isIncompleteQuickFix,
 } from "@/lib/scoring/quickFix";
-import {
-  firstSentence,
-  hideInternalIds,
-} from "@/lib/ui/reportPresentation";
 import {
   quickFixForDisplay,
   sanitizeQuickFixTypography,
@@ -127,20 +122,13 @@ function kickoffNextStepsFix(): QuickFixView {
   };
 }
 
-function fullMarksPraise(dim: DimensionResult): string | null {
-  const cleaned = hideInternalIds(dim.rationale.trim()).replace(
-    /^scored\s+\d+(?:\.\d+)?\s*\/\s*\d+\s*(?:because\s+)?/i,
-    "",
-  );
-  if (cleaned.length < 28) return null;
-  if (
-    /scored from the rubric|could have been better|not demonstrated|missing elite/i.test(
-      cleaned,
-    )
-  ) {
-    return null;
-  }
-  return firstSentence(cleaned);
+function kickoffPrepFix(): QuickFixView {
+  return {
+    title: "Surface preparation early",
+    body: "Reference two relevant intake details—such as the client's goal, injury history, or previous treatment—in the first few minutes so preparation is immediately clear.",
+    steps: null,
+    complete: false,
+  };
 }
 
 function claimsUnverifiedAsFact(dim: DimensionResult, text: string): boolean {
@@ -235,8 +223,8 @@ export function presentQuickFix(
 
   if (atFullMarks) {
     return {
-      title: FULL_MARKS_QUICK_FIX,
-      body: fullMarksPraise(dim),
+      title: "Full marks reached",
+      body: null,
       steps: null,
       complete: true,
     };
@@ -252,6 +240,12 @@ export function presentQuickFix(
 
   if (callType === "kickoff" && dim.id === "d9") {
     return kickoffNextStepsFix();
+  }
+
+  if (callType === "kickoff" && dim.id === "d1") {
+    if (!usable || /intake details\s*\(/i.test(source)) {
+      return kickoffPrepFix();
+    }
   }
 
   if (
@@ -271,7 +265,12 @@ export function presentQuickFix(
   }
 
   if (!usable) {
-    return null;
+    return {
+      title: "Close the gap on this dimension",
+      body: "Demonstrate the missing elite behaviour with clear client confirmation before ending the call.",
+      steps: null,
+      complete: false,
+    };
   }
 
   if (GENERIC_ADVICE.test(source) && source.split(/\s+/).length < 8) {

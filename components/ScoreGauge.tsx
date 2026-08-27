@@ -68,22 +68,50 @@ export function ScoreGauge({
   );
 }
 
-export function ScoreStrip({ dimensions }: { dimensions: DimensionResult[] }) {
+export function ScoreStrip({
+  dimensions,
+  onSelect,
+}: {
+  dimensions: DimensionResult[];
+  onSelect?: (id: string) => void;
+}) {
   return (
-    <div className="flex h-9 w-full items-end gap-1" aria-hidden>
+    <div
+      className="flex h-9 w-full items-end gap-1"
+      role={onSelect ? "navigation" : undefined}
+      aria-label={onSelect ? "Jump to dimension by score" : undefined}
+    >
       {dimensions.map((dim) => {
         const ratio = dimensionRatio(dim);
         const tone = dimensionTone(dim);
+        const label = `${dim.name} ${dim.score ?? "—"}/${dim.maxScore}`;
+        const style = {
+          height: `${Math.round((ratio ?? 0.18) * 36)}px`,
+          background: toneFill(tone),
+          opacity: tone === "muted" ? 0.45 : 0.9,
+        } as const;
+
+        if (onSelect) {
+          return (
+            <button
+              key={dim.id}
+              type="button"
+              title={label}
+              aria-label={`Go to ${label}`}
+              onClick={() => onSelect(dim.id)}
+              className="min-w-0 flex-1 rounded-[3px] transition hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--ink)]"
+              style={style}
+            />
+          );
+        }
+
         return (
           <div
             key={dim.id}
             className="flex-1 rounded-[3px]"
-            title={`${dim.name} ${dim.score ?? "—"}/${dim.maxScore}`}
-            style={{
-              height: `${Math.round(((ratio ?? 0.18) * 36))}px`,
-              background: toneFill(tone),
-              opacity: tone === "muted" ? 0.45 : 0.9,
-            }}
+            title={label}
+            style={style}
+            aria-hidden
           />
         );
       })}

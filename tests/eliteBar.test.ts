@@ -5,6 +5,7 @@ import { applyCapsAndBuildResult } from "@/lib/scoring/calculate";
 import { hydrateCompletedReport } from "@/lib/scoring/hydrateReport";
 import {
   coachingHasCheckInElite,
+  kickoffHasAgendaElite,
   kickoffHasDeepWhyElite,
   kickoffHasJourneyElite,
   kickoffHasNextStepsConfirmation,
@@ -71,6 +72,15 @@ describe("kickoff-01 quality bar (independent of a prior 87)", () => {
 
   it("does not raise a Strong rapport score", () => {
     expect(nextEliteScore("kickoff", "d2", 7, kickoff01)).toBe(7);
+  });
+
+  it("keeps agenda Elite on kickoff-01 and caps when consent is missing", () => {
+    expect(kickoffHasAgendaElite(kickoff01)).toBe(true);
+    expect(nextEliteScore("kickoff", "d3", 5, kickoff01)).toBe(5);
+    const thin =
+      "[Dana]: Today we'll talk goals and program.\n[Owen]: Okay.";
+    expect(kickoffHasAgendaElite(thin)).toBe(false);
+    expect(nextEliteScore("kickoff", "d3", 5, thin)).toBe(3);
   });
 
   it("does not cap kickoff-01 elite next-steps solely because there is no demo", () => {

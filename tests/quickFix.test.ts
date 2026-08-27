@@ -57,19 +57,19 @@ describe("resolveQuickFix", () => {
   it("keeps the existing full-marks sentence", () => {
     expect(
       resolveQuickFix({
-        quickFix: "Full marks were reached.",
+        quickFix: "Full marks reached.",
         score: 10,
         maxScore: 10,
         disabled: false,
         notApplicable: false,
         dimension: rapport,
       }),
-    ).toBe("Full marks were reached.");
+    ).toBe("Full marks reached.");
   });
 
   it("does not keep a canned full-marks line on a missed dimension", () => {
     const text = resolveQuickFix({
-      quickFix: "Full marks were reached.",
+      quickFix: "Full marks reached.",
       score: 7,
       maxScore: 10,
       disabled: false,
@@ -122,7 +122,7 @@ describe("refreshDimensionQuickFixes", () => {
     expect(below).toHaveLength(2);
     expect(below[0]!.quickFix).not.toBe(below[1]!.quickFix);
     expect(below.every((d) => d.quickFix.length > 12)).toBe(true);
-    expect(refreshed.filter((d) => d.score === d.maxScore).every((d) => d.quickFix === "Full marks were reached.")).toBe(
+    expect(refreshed.filter((d) => d.score === d.maxScore).every((d) => d.quickFix === "Full marks reached.")).toBe(
       true,
     );
   });
@@ -180,7 +180,7 @@ describe("empty model quickFix does not change kickoff totals", () => {
     const d3 = result.dimensions.find((d) => d.id === "d3")!;
     expect(d2.score).toBe(7);
     expect(d2.quickFix).toMatch(/personal/i);
-    expect(d3.quickFix).toBe("Full marks were reached.");
+    expect(d3.quickFix).toBe("Full marks reached.");
     expect(result.overallScore).toBe(96);
   });
 });
