@@ -123,32 +123,30 @@ function pickMatchingLines(
   return quotes;
 }
 
-function withVerifiedQuotes<
-  T extends {
-    evidence: Array<{
-      quote: string;
-      speaker: string | null;
-      location: string | null;
-      demonstrated: boolean;
-      verificationStatus?: "verified" | "unverified" | "rejected";
-    }>;
-    verifiedEvidenceCount?: number;
-    rejectedEvidenceCount?: number;
-    evidenceFound?: boolean;
-    notDemonstrated?: boolean;
-  },
->(dim: T, quotes: string[]): T {
+function withVerifiedQuotes<T extends {
+  evidence: Array<{
+    quote: string;
+    speaker: string | null;
+    location: string | null;
+    demonstrated: boolean;
+    verificationStatus?: string;
+  }>;
+  verifiedEvidenceCount?: number;
+  rejectedEvidenceCount?: number;
+  evidenceFound?: boolean;
+  notDemonstrated?: boolean;
+}>(dim: T, quotes: string[]): T {
   if (quotes.length === 0) return dim;
   const evidence = quotes.map((quote) => ({
     quote,
-    speaker: null,
-    location: null,
+    speaker: null as string | null,
+    location: null as string | null,
     demonstrated: true,
-    verificationStatus: "verified" as const,
+    verificationStatus: "verified",
   }));
   return {
     ...dim,
-    evidence,
+    evidence: evidence as T["evidence"],
     verifiedEvidenceCount: evidence.length,
     rejectedEvidenceCount: 0,
     evidenceFound: true,

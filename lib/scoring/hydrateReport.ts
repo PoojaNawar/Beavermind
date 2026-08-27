@@ -1,5 +1,5 @@
 import { getRubric } from "@/lib/rubrics";
-import type { EvaluationResult } from "@/lib/rubrics/types";
+import type { DimensionResult, EvaluationResult } from "@/lib/rubrics/types";
 import {
   applyKickoffCloseCalibration,
   filterKickoffTranscriptRedFlags,
@@ -44,7 +44,7 @@ function applyCoachingTranscriptRepairs(
   if (result.callType !== "coaching" || !transcript?.trim()) return result;
 
   let changed = false;
-  const dimensions = result.dimensions.map((d) => {
+  const dimensions: DimensionResult[] = result.dimensions.map((d) => {
     let next = repairCoachingMovementDimension(d, transcript);
     next = repairCoachingBookingDimension(next, transcript);
     if (
@@ -57,7 +57,7 @@ function applyCoachingTranscriptRepairs(
         next.evidence,
         next.notDemonstrated,
       );
-      return { ...next, ...quality };
+      return { ...next, ...quality } satisfies DimensionResult;
     }
     return d;
   });

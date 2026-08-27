@@ -317,26 +317,24 @@ export function pickMovementEvidenceQuotes(transcript: string): string[] {
  * If the model disables D4 despite live movement coaching in the transcript,
  * re-enable and score from transcript signals. Never disables an already-scored D4.
  */
-export function repairCoachingMovementDimension<
-  T extends {
-    id: string;
-    disabled: boolean;
-    disabledReason: string | null;
-    notApplicable: boolean;
-    notApplicableReason: string | null;
-    score: number | null;
-    rationale: string;
-    evidence: Array<{
-      quote: string;
-      speaker: string | null;
-      location: string | null;
-      demonstrated: boolean;
-      verificationStatus?: "verified" | "unverified" | "rejected";
-    }>;
-    quickFix: string;
-    notDemonstrated: boolean;
-  },
->(dim: T, transcript: string): T {
+export function repairCoachingMovementDimension<T extends {
+  id: string;
+  disabled: boolean;
+  disabledReason: string | null;
+  notApplicable: boolean;
+  notApplicableReason: string | null;
+  score: number | null;
+  rationale: string;
+  evidence: Array<{
+    quote: string;
+    speaker: string | null;
+    location: string | null;
+    demonstrated: boolean;
+    verificationStatus?: string;
+  }>;
+  quickFix: string;
+  notDemonstrated: boolean;
+}>(dim: T, transcript: string): T {
   if (dim.id !== "d4") return dim;
   if (!transcript?.trim()) return dim;
   if (!coachingHasLiveMovementCoaching(transcript)) return dim;
@@ -350,10 +348,10 @@ export function repairCoachingMovementDimension<
     quotes.length > 0
       ? quotes.map((quote) => ({
           quote,
-          speaker: null,
-          location: null,
+          speaker: null as string | null,
+          location: null as string | null,
           demonstrated: true,
-          verificationStatus: "verified" as const,
+          verificationStatus: "verified",
         }))
       : dim.evidence;
 
@@ -377,7 +375,7 @@ export function repairCoachingMovementDimension<
       score >= 15
         ? ""
         : "Coach the movement live, ask a reflective question, and link the improvement to the goal.",
-    evidence,
+    evidence: evidence as T["evidence"],
   };
 }
 
@@ -385,17 +383,15 @@ export function repairCoachingMovementDimension<
  * If the model scored D10 as 0 despite a live booking in the transcript,
  * restore full marks. Never invents a booking that is not present.
  */
-export function repairCoachingBookingDimension<
-  T extends {
-    id: string;
-    disabled: boolean;
-    notApplicable: boolean;
-    score: number | null;
-    rationale: string;
-    quickFix: string;
-    notDemonstrated: boolean;
-  },
->(dim: T, transcript: string): T {
+export function repairCoachingBookingDimension<T extends {
+  id: string;
+  disabled: boolean;
+  notApplicable: boolean;
+  score: number | null;
+  rationale: string;
+  quickFix: string;
+  notDemonstrated: boolean;
+}>(dim: T, transcript: string): T {
   if (dim.id !== "d10") return dim;
   if (!transcript?.trim()) return dim;
   if (dim.disabled || dim.notApplicable) return dim;
