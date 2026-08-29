@@ -11,6 +11,7 @@ import {
 import {
   computeScoreIfApplied,
   resolveLeverageTheme,
+  topMissedDimension,
   type LeverageTheme,
 } from "@/lib/scoring/scoreIfApplied";
 
@@ -34,6 +35,8 @@ const GENERIC_IMPACT =
 
 const LOW_LEVERAGE_ONE_THING =
   /community|post(ing)? more|share more (often|in the community)|feel more connected/i;
+
+const RAISE_BEFORE_CALL_RE = /^raise .+ before the next call/i;
 
 export function hideInternalIds(text: string): string {
   return text
@@ -764,10 +767,7 @@ function copyForTheme(
           "When the emotional why is named, confirmed, and tied to a near-term marker, the rest of the program has something concrete to serve.",
       };
     case "largest-gap": {
-      const missed = scoredDimensions(result)
-        .filter(isMissed)
-        .sort((a, b) => gapOf(b) - gapOf(a));
-      const top = missed[0];
+      const top = topMissedDimension(result);
       if (!top) return null;
       return actionOneThingForDimension(top, result.callType);
     }
@@ -795,12 +795,46 @@ function recommendationMatchesTheme(recommendation: string, theme: LeverageTheme
     );
   }
   if (theme === "vision") {
-    return /vision|training block|long-term/.test(rec);
+    return /vision|training block|long-term|program focus/.test(rec);
   }
   if (theme === "north-star") {
     return /north star|30-day|emotional why/.test(rec);
   }
+  if (theme === "largest-gap") {
+    return true;
+  }
   return false;
+}
+
+function oneThingMatchesTopGap(
+  result: EvaluationResult,
+  recommendation: string,
+): boolean {
+  const top = topMissedDimension(result);
+  if (!top) return true;
+  const rec = recommendation.toLowerCase();
+  switch (top.id) {
+    case "d6":
+    case "d7":
+      return /accountab|continuity|deliverable|check-in|close the loop|anchor/i.test(
+        rec,
+      );
+    case "d3":
+      return /vision|training block|program focus|long-term/i.test(rec);
+    case "d5":
+      return /adjust|strategy|long game|protect/i.test(rec);
+    case "d10":
+      return /book|next call|calendar|locked/i.test(rec);
+    case "d11":
+      return /continuity|follow-up|follow up/i.test(rec);
+    case "d9":
+      return (
+        /close the loop|confirm|diagnostic|upload|what to do|by when/i.test(rec) &&
+        !RAISE_BEFORE_CALL_RE.test(rec)
+      );
+    default:
+      return rec.includes(top.name.toLowerCase().slice(0, 12));
+  }
 }
 
 export function refineOneThing(result: EvaluationResult): OneThing {
@@ -815,7 +849,9 @@ export function refineOneThing(result: EvaluationResult): OneThing {
     derived &&
     rec.length >= 12 &&
     !LOW_LEVERAGE_ONE_THING.test(rec) &&
-    recommendationMatchesTheme(rec, theme);
+    !RAISE_BEFORE_CALL_RE.test(rec) &&
+    recommendationMatchesTheme(rec, theme) &&
+    oneThingMatchesTopGap(result, rec);
 
   const allFull = scoredDimensions(result).every((d) => d.score === d.maxScore);
   if (theme === "none" && allFull && derived) {
@@ -841,7 +877,14 @@ export function refineOneThing(result: EvaluationResult): OneThing {
     };
   }
 
-  if (derived && (LOW_LEVERAGE_ONE_THING.test(rec) || !recommendationMatchesTheme(rec, theme) || !rec)) {
+  if (
+    derived &&
+    (LOW_LEVERAGE_ONE_THING.test(rec) ||
+      RAISE_BEFORE_CALL_RE.test(rec) ||
+      !recommendationMatchesTheme(rec, theme) ||
+      !oneThingMatchesTopGap(result, rec) ||
+      !rec)
+  ) {
     return {
       ...current,
       recommendation: derived.recommendation,

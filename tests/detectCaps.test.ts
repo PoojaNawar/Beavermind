@@ -80,6 +80,14 @@ describe("deterministic cap detection", () => {
     );
   });
 
+  it("recognizes kickoff-01 live booking with calendar invite and o'clock time", () => {
+    const kickoff01 = readFileSync(
+      path.join(process.cwd(), "transcripts/kickoff-01.txt"),
+      "utf8",
+    );
+    expect(hasLiveNextCallBooking(kickoff01)).toBe(true);
+  });
+
   it("fires next-call-not-booked whenever live booking is absent", () => {
     const silentClose =
       "Great session today. Talk soon and keep posting in the community.";

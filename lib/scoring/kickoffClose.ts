@@ -60,25 +60,42 @@ export function kickoffHasSupportClarity(transcript: string): boolean {
  */
 export function kickoffHasPostCallCommitment(transcript: string): boolean {
   const coachCommit =
-    /i(?:'ll| will) (?:build|send|look at|review|put together|write|drop|have).{0,80}(?:program|feedback|plan|note|it ready)/i.test(
+    /i(?:'ll| will|'m going to| am going to) (?:build|send|look at|review|put together|write|drop|have|assign).{0,100}(?:program|feedback|plan|note|it ready|diagnostics|recap)/i.test(
       transcript,
-    );
+    ) ||
+    /i(?:'m| am) assigning.{0,60}(?:diagnostics|program)/i.test(transcript) ||
+    /you(?:'ll| will) (?:also )?get (?:a |your )?(?:short )?recap/i.test(
+      transcript,
+    ) ||
+    /program(?:'s| is) (?:loaded|ready).{0,40}by/i.test(transcript);
   const timing =
-    /(?:over the |by |this |ready )?(?:weekend|monday|tuesday|wednesday|thursday|friday|saturday|sunday|tonight|tomorrow|end of (?:the )?week)|gives me the weekend/i.test(
+    /(?:over the |by |this |ready |within |in the next )?(?:weekend|monday|tuesday|wednesday|thursday|friday|saturday|sunday|tonight|tomorrow|end of (?:the )?week|\d+\s*minutes?|fifteen minutes|couple minutes)|gives me the weekend|right now while we(?:'re| are) still on/i.test(
       transcript,
     );
   return coachCommit && timing;
 }
 
-/** Discrete-ish D12 floor when a timed coach commitment is present. */
+/** Discrete-ish D12 floor when timed coach commitments are present. */
 export function kickoffPostCallFloor(transcript: string): number {
   if (!kickoffHasPostCallCommitment(transcript)) return 0;
-  const richer =
-    (/weekend/i.test(transcript) &&
-      /(?:monday|notification|message me|live)/i.test(transcript)) ||
-    (/i(?:'ll| will) (?:build|send|look at|review)/i.test(transcript) &&
-      /i(?:'ll| will) (?:send|drop|message|check)/i.test(transcript));
-  return richer ? 3.5 : 2.5;
+  const count =
+    Number(
+      /i(?:'m| am) assigning|i(?:'ll| will) (?:build|send|assign)/i.test(
+        transcript,
+      ),
+    ) +
+    Number(/recap message|recap .{0,20}within/i.test(transcript)) +
+    Number(/program(?:'s| is) (?:loaded|ready)|program .{0,20}by/i.test(transcript));
+  // Three distinct timed commitments = elite band top; rushed close caps elsewhere.
+  if (count >= 3) {
+    const rushed =
+      /watching the clock|move a bit quicker|getting close to time/i.test(
+        transcript,
+      );
+    return rushed ? 3.5 : 4.5;
+  }
+  if (count >= 2) return 3.5;
+  return 2.5;
 }
 
 function gradeFromHundred(score: number): EvaluationResult["grade"] {
@@ -243,14 +260,25 @@ export function applyKickoffCloseCalibration(
   const d12 = next.dimensions.find((d) => d.id === "d12");
   if (d12 && !d12.disabled && !d12.notApplicable && d12.score !== null) {
     const floor = kickoffPostCallFloor(transcript);
-    if (floor > 0 && d12.score < floor) {
-      next = recalculateAfterDimPatch(
-        next,
-        "d12",
-        floor,
-        "Commit to specific post-call deliverables with precise deadlines.",
-        transcript,
-      );
+    if (floor > 0) {
+      const rushed =
+        /watching the clock|move a bit quicker|getting close to time/i.test(
+          transcript,
+        );
+      let score = d12.score;
+      if (score < floor) score = floor;
+      if (rushed && score > floor) score = floor;
+      if (score !== d12.score) {
+        next = recalculateAfterDimPatch(
+          next,
+          "d12",
+          score,
+          score >= 4.5
+            ? ""
+            : "Commit to specific post-call deliverables with precise deadlines.",
+          transcript,
+        );
+      }
     }
   }
 

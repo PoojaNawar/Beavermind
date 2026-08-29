@@ -9,12 +9,16 @@ import {
   coachingHasMovementElite,
   coachingMovementScore,
   kickoffHasAgendaElite,
+  kickoffAgendaIsUpfront,
+  kickoffCloseFeelsRushed,
   kickoffHasDeepWhyElite,
   kickoffHasJourneyElite,
   kickoffHasNextStepsConfirmation,
   kickoffHasNextStepsElite,
+  kickoffHasPrepElite,
   kickoffHasProgramElite,
   kickoffHasRapportElite,
+  kickoffPersonalShareAfterAgenda,
   nextEliteScore,
 } from "@/lib/scoring/eliteBar";
 import { getKickoffRubric } from "@/lib/rubrics/kickoff";
@@ -71,23 +75,85 @@ describe("kickoff-01 quality bar (independent of a prior 87)", () => {
     expect(kickoffHasProgramElite(kickoff01)).toBe(true);
     expect(kickoffHasDeepWhyElite(kickoff01)).toBe(true);
     expect(kickoffHasRapportElite(kickoff01)).toBe(true);
+    expect(kickoffHasPrepElite(kickoff01)).toBe(true);
+  });
+
+  it("floors near-elite prep to 10 when CRM details are present", () => {
+    expect(nextEliteScore("kickoff", "d1", 9, kickoff01)).toBe(9);
+    const result = applyCapsAndBuildResult({
+      model: stub(getKickoffRubric(), {
+        d1: 9,
+        d2: 7,
+        d3: 5,
+        d4: 15,
+        d5: 10,
+        d6: 10,
+        d7: 5,
+        d8: 10,
+        d9: 10,
+        d10: 5,
+        d11: 5,
+        d12: 5,
+      }),
+      rubric: getKickoffRubric(),
+      modelName: "test",
+      transcript: kickoff01,
+    });
+    expect(result.dimensions.find((d) => d.id === "d1")?.score).toBe(9);
+  });
+
+  it("caps inflated kickoff-01 scores where the script has real gaps", () => {
+    expect(kickoffAgendaIsUpfront(kickoff01)).toBe(false);
+    expect(kickoffPersonalShareAfterAgenda(kickoff01)).toBe(true);
+    expect(kickoffCloseFeelsRushed(kickoff01)).toBe(true);
+    const result = applyCapsAndBuildResult({
+      model: stub(getKickoffRubric(), {
+        d1: 9,
+        d2: 10,
+        d3: 5,
+        d4: 15,
+        d5: 10,
+        d6: 10,
+        d7: 5,
+        d8: 10,
+        d9: 10,
+        d10: 5,
+        d11: 5,
+        d12: 5,
+      }),
+      rubric: getKickoffRubric(),
+      modelName: "test",
+      transcript: kickoff01,
+    });
+    expect(result.dimensions.find((d) => d.id === "d2")?.score).toBe(7);
+    expect(result.dimensions.find((d) => d.id === "d3")?.score).toBe(3);
+    expect(result.dimensions.find((d) => d.id === "d9")?.score).toBe(7);
+    expect(result.overallScore).toBeLessThan(97);
+  });
+
+  it("caps prep Elite when intake details are missing", () => {
+    const thin =
+      "[Dana]: I looked at your notes.\n[Owen]: Cool.\n[Dana]: Let's start.";
+    expect(kickoffHasPrepElite(thin)).toBe(false);
+    expect(nextEliteScore("kickoff", "d1", 10, thin)).toBe(7);
   });
 
   it("does not raise a Strong rapport score", () => {
     expect(nextEliteScore("kickoff", "d2", 7, kickoff01)).toBe(7);
   });
 
-  it("keeps agenda Elite on kickoff-01 and caps when consent is missing", () => {
+  it("keeps agenda Elite only when framing is upfront; caps late agenda", () => {
     expect(kickoffHasAgendaElite(kickoff01)).toBe(true);
-    expect(nextEliteScore("kickoff", "d3", 5, kickoff01)).toBe(5);
+    expect(kickoffAgendaIsUpfront(kickoff01)).toBe(false);
+    expect(nextEliteScore("kickoff", "d3", 5, kickoff01)).toBe(3);
     const thin =
       "[Dana]: Today we'll talk goals and program.\n[Owen]: Okay.";
     expect(kickoffHasAgendaElite(thin)).toBe(false);
     expect(nextEliteScore("kickoff", "d3", 5, thin)).toBe(3);
   });
 
-  it("does not cap kickoff-01 elite next-steps solely because there is no demo", () => {
-    expect(nextEliteScore("kickoff", "d9", 10, kickoff01)).toBe(10);
+  it("caps kickoff-01 next-steps when the client hedges and the close is rushed", () => {
+    expect(nextEliteScore("kickoff", "d9", 10, kickoff01)).toBe(7);
   });
 
   it("caps next-steps 10 when the client never confirms understanding", () => {
@@ -130,11 +196,11 @@ describe("kickoff-01 quality bar (independent of a prior 87)", () => {
       transcript: kickoff01,
     });
     expect(result.dimensions.find((d) => d.id === "d2")?.score).toBe(7);
-    expect(result.dimensions.find((d) => d.id === "d9")?.score).toBe(10);
-    expect(result.overallScore).toBe(97);
+    expect(result.dimensions.find((d) => d.id === "d9")?.score).toBe(7);
+    expect(result.overallScore).toBe(91);
   });
 
-  it("does not invent a D9 cap on refresh when understanding is already in the transcript", () => {
+  it("caps D9 on refresh when confirmation is hedged and the close is rushed", () => {
     const stored = applyCapsAndBuildResult({
       model: stub(getKickoffRubric(), {
         d1: 10,
@@ -154,8 +220,8 @@ describe("kickoff-01 quality bar (independent of a prior 87)", () => {
       modelName: "test",
     });
     const repaired = hydrateCompletedReport(stored, kickoff01);
-    expect(repaired.dimensions.find((d) => d.id === "d9")?.score).toBe(10);
-    expect(repaired.overallScore).toBe(97);
+    expect(repaired.dimensions.find((d) => d.id === "d9")?.score).toBe(7);
+    expect(repaired.overallScore).toBe(91);
   });
 });
 

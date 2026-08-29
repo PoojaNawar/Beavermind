@@ -184,6 +184,44 @@ function isMissed(dim: DimensionResult): boolean {
   );
 }
 
+/** When gaps tie, prefer continuity/accountability gaps over vision for coaching. */
+const COACHING_GAP_PRIORITY = [
+  "d6",
+  "d7",
+  "d11",
+  "d5",
+  "d3",
+  "d1",
+  "d8",
+  "d9",
+  "d12",
+  "d10",
+];
+
+function coachingGapPriority(id: string): number {
+  const idx = COACHING_GAP_PRIORITY.indexOf(id);
+  return idx >= 0 ? idx : 99;
+}
+
+/** Largest point gap; ties break on lowest score ratio, then dimension id. */
+export function topMissedDimension(
+  result: EvaluationResult,
+): DimensionResult | undefined {
+  const missed = result.dimensions.filter(isMissed);
+  if (missed.length === 0) return undefined;
+  return [...missed].sort((a, b) => {
+    const gapDiff = gapOf(b) - gapOf(a);
+    if (gapDiff !== 0) return gapDiff;
+    const ratioA = a.score! / a.maxScore;
+    const ratioB = b.score! / b.maxScore;
+    if (ratioA !== ratioB) return ratioA - ratioB;
+    if (result.callType === "coaching") {
+      return coachingGapPriority(a.id) - coachingGapPriority(b.id);
+    }
+    return a.id.localeCompare(b.id);
+  })[0];
+}
+
 function dimById(result: EvaluationResult, id: string) {
   return result.dimensions.find((d) => d.id === id);
 }
@@ -210,12 +248,16 @@ export function resolveLeverageTheme(result: EvaluationResult): LeverageTheme {
     const missed = result.dimensions.filter(isMissed);
     if (missed.length === 0) return "none";
 
-    const largest = [...missed].sort(
-      (a, b) => gapOf(b) - gapOf(a) || a.name.localeCompare(b.name),
-    )[0];
+    const largest = topMissedDimension(result);
     if (
-      largest?.id === "d3" ||
-      result.firedCaps.some((c) => c.id === "no-long-term-vision")
+      result.firedCaps.some((c) => c.id === "no-long-term-vision") &&
+      largest?.id === "d3"
+    ) {
+      return "vision";
+    }
+    if (
+      largest?.id === "d3" &&
+      !missed.some((d) => d.id !== "d3" && gapOf(d) >= gapOf(largest))
     ) {
       return "vision";
     }
@@ -226,9 +268,7 @@ export function resolveLeverageTheme(result: EvaluationResult): LeverageTheme {
   if (missed.length === 0) return "none";
   if (result.firedCaps.some((c) => c.id === "no-north-star")) return "north-star";
   const d4 = dimById(result, "d4");
-  const largest = [...missed].sort(
-    (a, b) => gapOf(b) - gapOf(a) || a.name.localeCompare(b.name),
-  )[0];
+  const largest = topMissedDimension(result);
   if (d4 && isMissed(d4) && largest?.id === "d4") return "north-star";
   return "largest-gap";
 }
@@ -266,9 +306,7 @@ export function oneThingLiftTargets(
       take("d4");
       break;
     case "largest-gap": {
-      const top = result.dimensions
-        .filter(isMissed)
-        .sort((a, b) => gapOf(b) - gapOf(a) || a.name.localeCompare(b.name))[0];
+      const top = topMissedDimension(result);
       if (top) lifts.set(top.id, top.maxScore);
       break;
     }

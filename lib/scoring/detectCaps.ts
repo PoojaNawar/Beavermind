@@ -33,10 +33,10 @@ export function hasLiveNextCallBooking(transcript: string): boolean {
   if (deferral) return false;
 
   const classic =
-    /(?:next call|follow[- ]?up).{0,100}(?:lock|book|schedule).{0,80}(?:tuesday|wednesday|thursday|friday|monday|saturday|sunday|\d{1,2}\s*(?::\d{2})?\s*(?:am|pm)|half\s+)/i.test(
+    /(?:next call|follow[- ]?up).{0,100}(?:lock|book|schedule).{0,80}(?:tuesday|wednesday|thursday|friday|monday|saturday|sunday|\d{1,2}\s*(?::\d{2})?\s*(?:am|pm)|half\s+|o'?clock)/i.test(
       transcript,
     ) ||
-    /(?:tuesday|wednesday|thursday|friday|monday).{0,60}(?:\d{1,2}\s*(?::\d{2})?\s*(?:am|pm)|half\s+(?:past\s+)?(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)).{0,60}(?:work|confirm|perfect|sounds good|locked|booked)/i.test(
+    /(?:tuesday|wednesday|thursday|friday|monday|saturday|sunday).{0,80}(?:\d{1,2}\s*(?::\d{2})?\s*(?:am|pm)|(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*o'?clock|half\s+(?:past\s+)?(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)).{0,80}(?:work|confirm|perfect|sounds good|locked|booked|calendar invite)/i.test(
       transcript,
     );
 
@@ -56,7 +56,15 @@ export function hasLiveNextCallBooking(transcript: string): boolean {
     /half\s+(?:past\s+)?(?:five|six|seven|eight|nine)/i.test(transcript) &&
     /(?:we(?:'re| are) locked in|locked in)/i.test(transcript);
 
-  return classic || linkFlow || britishLock;
+  // Calendar invite sent live with day + spoken/digital time.
+  const inviteLive =
+    /calendar invite|sending you the calendar|invite for that right now/i.test(
+      transcript,
+    ) &&
+    DAY.test(transcript) &&
+    CLOCK_TIME.test(transcript);
+
+  return classic || linkFlow || britishLock || inviteLive;
 }
 
 export function detectDeterministicCapIds(

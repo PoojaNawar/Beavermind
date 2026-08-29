@@ -39,6 +39,66 @@ export function kickoffHasAgendaElite(transcript: string): boolean {
   return time && sequenced && consent;
 }
 
+/** Agenda must land early — not after extended prep/rapport. */
+export function kickoffAgendaIsUpfront(transcript: string): boolean {
+  const lines = transcript
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  let agendaIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (
+      /shape of it|minutes together today|here(?:'s| is) kind of the shape/i.test(
+        lines[i]!,
+      )
+    ) {
+      agendaIdx = i;
+      break;
+    }
+  }
+  if (agendaIdx < 0) return false;
+  const maxEarlyLine = Math.min(14, Math.floor(lines.length * 0.12));
+  return agendaIdx <= maxEarlyLine;
+}
+
+/** Client hedges on next steps ("I think", "hope", "figure it out") without firm confirm. */
+export function kickoffHasWeakNextStepsConfirmation(transcript: string): boolean {
+  return /(?:hope it'?s close|do my best|figure it out|i think i can|probably okay)/i.test(
+    transcript,
+  );
+}
+
+/** Coach rushes the close — undermines next-steps clarity. */
+export function kickoffCloseFeelsRushed(transcript: string): boolean {
+  return /watching the clock|move a bit quicker|getting close to time|let me move a bit quicker/i.test(
+    transcript,
+  );
+}
+
+/** Personal share lands after agenda framing — breaks call structure. */
+export function kickoffPersonalShareAfterAgenda(transcript: string): boolean {
+  const lines = transcript.split(/\n+/);
+  let agendaIdx = -1;
+  let shareIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (
+      agendaIdx < 0 &&
+      /shape of it|minutes together today/i.test(lines[i]!)
+    ) {
+      agendaIdx = i;
+    }
+    if (
+      shareIdx < 0 &&
+      /rotator cuff|i did a rotator|years back.*(?:myself|kettlebell)/i.test(
+        lines[i]!,
+      )
+    ) {
+      shareIdx = i;
+    }
+  }
+  return agendaIdx >= 0 && shareIdx > agendaIdx;
+}
+
 export function kickoffHasJourneyElite(transcript: string): boolean {
   const valley = /week three|week 3|week four|week 4|\bvalley\b/i.test(transcript);
   const foundational =
@@ -91,6 +151,11 @@ export function kickoffHasNextStepsTimeline(transcript: string): boolean {
 }
 
 export function kickoffHasNextStepsConfirmation(transcript: string): boolean {
+  if (kickoffHasWeakNextStepsConfirmation(transcript)) {
+    return /does all of that track|that(?:'s| is) basically everything|did i miss anything/i.test(
+      transcript,
+    );
+  }
   return /got it|that works|that(?:'s| is) clear|i think i can|thursday.{0,60}filming|program by|sounds good.{0,40}(?:thursday|monday|film)/i.test(
     transcript,
   );
@@ -125,6 +190,24 @@ export function kickoffHasProgramElite(transcript: string): boolean {
       transcript,
     );
   return phases && jobOrOutcome && goalTie;
+}
+
+/**
+ * Prep elite: coach shows intake was reviewed with ≥2 specific CRM details
+ * (not just "I looked at your notes").
+ */
+export function kickoffHasPrepElite(transcript: string): boolean {
+  const prepFrame =
+    /intake(?:notes|call|form)|got (?:it|your (?:notes|file|intake)) in front|do not need to repeat|already went through|I(?:'ve| have) got (?:it|the whole picture)|reviewed (?:your |the )?(?:intake|notes|CRM)/i.test(
+      transcript,
+    );
+  const details = [
+    /\b(?:forty|thirty|fifty)[- ]?\w+\b|\b\d{2}\b.{0,40}(?:years? old|architect|engineer|teacher|portland)/i,
+    /architect|engineer|teacher|portland|occupation|job site/i,
+    /(?:low )?back|shoulder|knee|hip|injury|impingement|rotator/i,
+    /tried (?:PT|physical therapy)|PT a couple|goals?|pain history|medical history/i,
+  ].filter((re) => re.test(transcript)).length;
+  return prepFrame && details >= 3;
 }
 
 export function kickoffHasRapportElite(transcript: string): boolean {
@@ -421,10 +504,28 @@ export function nextEliteScore(
   if (score === null || !transcript?.trim()) return score;
 
   if (callType === "kickoff") {
+    if (dimensionId === "d1" && score >= 9 && !kickoffHasPrepElite(transcript)) {
+      return 7;
+    }
     if (dimensionId === "d2" && score >= 10 && !kickoffHasRapportElite(transcript)) {
       return 7;
     }
+    if (
+      dimensionId === "d2" &&
+      score >= 10 &&
+      kickoffPersonalShareAfterAgenda(transcript)
+    ) {
+      return 7;
+    }
     if (dimensionId === "d3" && score >= 4.5 && !kickoffHasAgendaElite(transcript)) {
+      return 3;
+    }
+    if (
+      dimensionId === "d3" &&
+      score >= 4.5 &&
+      kickoffHasAgendaElite(transcript) &&
+      !kickoffAgendaIsUpfront(transcript)
+    ) {
       return 3;
     }
     if (dimensionId === "d4" && score >= 15 && !kickoffHasDeepWhyElite(transcript)) {
@@ -453,6 +554,21 @@ export function nextEliteScore(
     }
     if (dimensionId === "d9" && score >= 10 && !kickoffHasNextStepsElite(transcript)) {
       return 7;
+    }
+    if (
+      dimensionId === "d9" &&
+      score >= 10 &&
+      (kickoffCloseFeelsRushed(transcript) ||
+        kickoffHasWeakNextStepsConfirmation(transcript))
+    ) {
+      return 7;
+    }
+    if (
+      dimensionId === "d12" &&
+      score >= 4.5 &&
+      kickoffCloseFeelsRushed(transcript)
+    ) {
+      return 3.5;
     }
   }
 
@@ -496,5 +612,19 @@ export function nextEliteScore(
     }
   }
 
+  return score;
+}
+
+/**
+ * @deprecated Caps-only scoring — never raises a score. Kept for call-site compatibility.
+ */
+export function floorEliteScore(
+  callType: CallType,
+  dimensionId: string,
+  score: number | null,
+  _transcript: string | undefined,
+): number | null {
+  void callType;
+  void dimensionId;
   return score;
 }

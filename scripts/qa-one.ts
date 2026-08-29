@@ -17,7 +17,11 @@ if (!label || !map[label]) {
   process.exit(2);
 }
 
-const BASE = "http://localhost:3000";
+const BASE = (
+  process.env.APP_URL ??
+  process.env.NEXT_PUBLIC_APP_URL ??
+  "http://localhost:3000"
+).replace(/\/$/, "");
 const { file, callType } = map[label];
 const transcript = readFileSync(path.join("transcripts", file), "utf8");
 

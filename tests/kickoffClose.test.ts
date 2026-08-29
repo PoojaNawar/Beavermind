@@ -112,7 +112,7 @@ describe("kickoff close calibration", () => {
       transcript: kickoff01,
     });
     expect(result.dimensions.find((d) => d.id === "d11")?.score).toBe(5);
-    expect(result.overallScore).toBe(96);
+    expect(result.overallScore).toBe(90);
   });
 
   it("caps D11 at 3 when the transcript has no recap", () => {
@@ -138,6 +138,17 @@ describe("kickoff close calibration", () => {
     expect(result.dimensions.find((d) => d.id === "d12")?.score).toBeGreaterThanOrEqual(
       2.5,
     );
+  });
+
+  it("floors D12 to elite band when kickoff-01 has three timed commitments", () => {
+    expect(kickoffPostCallFloor(kickoff01)).toBe(3.5);
+    const result = applyCapsAndBuildResult({
+      model: stub({ ...ELITE_SCORES, d12: 3 }, "Soft post-call mention."),
+      rubric: getKickoffRubric(),
+      modelName: "test",
+      transcript: kickoff01,
+    });
+    expect(result.dimensions.find((d) => d.id === "d12")?.score).toBe(3.5);
   });
 
   it("restores D7 when support channel, response time, and community are present", () => {
@@ -199,7 +210,7 @@ describe("kickoff close calibration", () => {
       kickoff01,
     );
     expect(repaired.dimensions.find((d) => d.id === "d11")?.score).toBe(5);
-    expect(repaired.overallScore).toBe(96);
+    expect(repaired.overallScore).toBe(94.5);
     expect(repaired.grade).toBe("Elite");
   });
 

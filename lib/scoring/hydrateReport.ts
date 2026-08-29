@@ -5,6 +5,7 @@ import {
   filterKickoffTranscriptRedFlags,
 } from "@/lib/scoring/kickoffClose";
 import {
+  floorEliteScore,
   nextEliteScore,
   repairCoachingBookingDimension,
   repairCoachingMovementDimension,
@@ -85,7 +86,8 @@ function applyEliteBarCalibration(
 
   let changed = false;
   const dimensions = result.dimensions.map((d) => {
-    const next = nextEliteScore(result.callType, d.id, d.score, transcript);
+    let next = nextEliteScore(result.callType, d.id, d.score, transcript);
+    next = floorEliteScore(result.callType, d.id, next, transcript);
     if (next === d.score) return d;
     changed = true;
     return { ...d, score: next };
@@ -156,7 +158,8 @@ export function hydrateCompletedReport(
   next = applyKickoffCloseCalibration(next, transcript);
   next = filterKickoffTranscriptRedFlags(next, transcript);
   next = hydrateEvaluationResult(next);
-  // Consistency/presentation can clear full-mark support; restore transcript floors last.
+  // Re-apply kick-off caps after presentation (never raise scores).
+  next = applyEliteBarCalibration(next, transcript);
   next = applyKickoffCloseCalibration(next, transcript);
   next = filterKickoffTranscriptRedFlags(next, transcript);
   return {

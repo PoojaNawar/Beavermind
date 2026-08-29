@@ -6,6 +6,8 @@ import {
 import { isIncompleteQuickFix } from "@/lib/scoring/quickFix";
 import { applyCapsAndBuildResult } from "@/lib/scoring/calculate";
 import { getKickoffRubric } from "@/lib/rubrics/kickoff";
+import { getCoachingRubric } from "@/lib/rubrics/coaching";
+import { resolveLeverageTheme } from "@/lib/scoring/scoreIfApplied";
 import { hydrateEvaluationResult } from "@/lib/transcripts/evidenceQuality";
 import { presentQuickFix } from "@/lib/ui/quickFixDisplay";
 import { briefSections, refineOneThing } from "@/lib/ui/reportPresentation";
@@ -61,6 +63,20 @@ function buildKickoff(
   extras?: Partial<ModelEvaluationOutput>,
 ): EvaluationResult {
   const rubric = getKickoffRubric();
+  return hydrateEvaluationResult(
+    applyCapsAndBuildResult({
+      model: modelFor(rubric, scores, extras),
+      rubric,
+      modelName: "test",
+    }),
+  );
+}
+
+function buildCoaching(
+  scores: Record<string, number | null>,
+  extras?: Partial<ModelEvaluationOutput>,
+): EvaluationResult {
+  const rubric = getCoachingRubric();
   return hydrateEvaluationResult(
     applyCapsAndBuildResult({
       model: modelFor(rubric, scores, extras),
@@ -272,5 +288,101 @@ describe("consistency repair", () => {
     const result = buildKickoff(scores);
     expect(result.oneThing.scoreIfApplied).not.toBeNull();
     expect(result.oneThing.scoreIfAppliedBasis).toMatch(/illustrative projection/i);
+  });
+
+  it("coaching One Thing follows the largest gap when vision is tied with accountability", () => {
+    const rubric = getCoachingRubric();
+    const scores: Record<string, number | null> = {
+      d1: 10,
+      d2: null,
+      d3: 10,
+      d4: null,
+      d5: 7,
+      d6: 10,
+      d7: 3,
+      d8: 5,
+      d9: 5,
+      d10: 5,
+      d11: 3,
+      d12: 5,
+    };
+    const raw = applyCapsAndBuildResult({
+      model: modelFor(rubric, scores, {
+        oneThing: {
+          recommendation: "Strengthen program focus + vision.",
+          impact: "This was the largest meaningful score gap on this evaluation.",
+          estimatedPointsGained: 6,
+          scoreIfAppliedBasis: "d3",
+        },
+        brief:
+          "The call demonstrated strong connection but lacked specific commitments and accountability measures.",
+        dimensions: [
+          {
+            id: "d2",
+            score: null,
+            disabled: true,
+            disabledReason: "notApplicable",
+            notApplicable: true,
+            notApplicableReason: "Not a milestone call.",
+            band: null,
+            rationale: "",
+            evidence: [],
+            quickFix: "",
+            notDemonstrated: false,
+          },
+          {
+            id: "d4",
+            score: null,
+            disabled: true,
+            disabledReason: "notApplicable",
+            notApplicable: true,
+            notApplicableReason: "No movement coaching occurred.",
+            band: null,
+            rationale: "",
+            evidence: [],
+            quickFix: "",
+            notDemonstrated: false,
+          },
+          {
+            id: "d6",
+            score: 10,
+            disabled: false,
+            disabledReason: null,
+            notApplicable: false,
+            notApplicableReason: null,
+            band: null,
+            rationale:
+              "The coach outlined clear commitments but they lacked specific deadlines and measurable outcomes.",
+            evidence: [
+              {
+                quote:
+                  "the three sessions we just mapped out, Tuesday, Wednesday, Friday, logged in the training app as they happen, that's the baseline.",
+                speaker: "Marcus Reid",
+                location: null,
+                demonstrated: true,
+                verificationStatus: "verified",
+              },
+            ],
+            quickFix: "Add deadlines.",
+            notDemonstrated: false,
+          },
+        ],
+      }),
+      rubric,
+      modelName: "test",
+    });
+    raw.dimensions.find((d) => d.id === "d2")!.disabled = true;
+    raw.dimensions.find((d) => d.id === "d2")!.notApplicable = true;
+    raw.dimensions.find((d) => d.id === "d4")!.disabled = true;
+    raw.dimensions.find((d) => d.id === "d4")!.notApplicable = true;
+
+    const result = hydrateEvaluationResult(raw);
+    expect(resolveLeverageTheme(result)).toBe("largest-gap");
+    const one = refineOneThing(result);
+    expect(one.recommendation).toMatch(/accountability|continuity|anchor/i);
+    expect(one.recommendation).not.toMatch(/program focus \+ vision/i);
+    expect(result.brief.toLowerCase()).not.toMatch(/lacked specific commitments/);
+    const brief = briefSections(result);
+    expect(brief.held.toLowerCase()).toMatch(/accountab|anchor|continuity/);
   });
 });

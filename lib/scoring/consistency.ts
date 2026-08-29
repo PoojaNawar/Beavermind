@@ -48,8 +48,17 @@ const BOOKING_FLAG_RE =
 const OPPORTUNITY_AS_FLAG_RE =
   /\b(could (?:have|be) better|nice to have|opportunity|consider|prefer(?:ably)?)\b/i;
 
+const ELITE_PRAISE_RE =
+  /\b(fully satisfied|fully outlined|every criterion|reached full marks|exemplary|all requirements met)\b/i;
+
+const BRIEF_COMMITMENT_GAP_RE =
+  /\b(lacked specific commitments|lacked commitments|no concrete accountability|without (?:clear )?commitments|no action steps)\b/i;
+
+const BRIEF_BOOKING_GAP_RE =
+  /\b(not booked|without booking|failed to book|next call was not booked)\b/i;
+
 const LIVE_BOOKING_EVIDENCE_RE =
-  /calendar invite|sending (?:you )?(?:the )?invite|book(?:ed|ing)? (?:it |the next call )?live|while we(?:'re| are) still on|lock(?:ed)? (?:in )?(?:for )?(?:tuesday|wednesday|thursday|friday|monday)/i;
+  /calendar invite|booking link|book(?:ed|ing)? (?:it |the next call )?live|half six|half past|we(?:'re| are) locked|locked in|go ahead and grab it/i;
 
 function isFullMarks(dim: DimensionResult): boolean {
   return (
@@ -105,15 +114,19 @@ export function evidenceSupportsFullMarks(
       ) ||
       /minutes together|about .{0,20}minutes/i.test(text);
     const thenCount = (text.match(/\bthen\b/gi) || []).length;
+    const agendaCue =
+      /agenda|shape of it|today we(?:'ll| will)|walk (?:you )?through|three phases|get into it|get to know|get really clear/i.test(
+        text,
+      );
+    // Verified quotes are often truncated; one "first…then…" plus an agenda cue
+    // is enough when time + consent are also present in the evidence set.
     const sequenced =
+      (/first/i.test(text) && thenCount >= 1 && agendaCue) ||
       (/first/i.test(text) && thenCount >= 2) ||
       (/(?:first|1[.\)\:]|phase\s*one)/i.test(text) &&
         /(?:second|2[.\)\:]|phase\s*two)/i.test(text) &&
         /(?:third|3[.\)\:]|phase\s*three|finally|last)/i.test(text)) ||
-      (thenCount >= 2 &&
-        /agenda|shape of it|today we(?:'ll| will)|walk (?:you )?through|three phases|get into it/i.test(
-          text,
-        ));
+      (thenCount >= 2 && agendaCue);
     const consent =
       /(?:does that (?:work|sound)|sound(?:s)? (?:good|ok|okay)|work for you|shall we)/i.test(
         text,
@@ -147,6 +160,44 @@ export function evidenceSupportsFullMarks(
     return /i(?:'ll| will) (?:build|send|look|review)|weekend|monday|program/i.test(
       text,
     );
+  }
+
+  if (callType === "coaching" && dim.id === "d3") {
+    const block = /block|phase|cycle|retraining|remodeling|integrating/i.test(text);
+    const vision =
+      /malham|twelve month|12-month|twenty fifth|long-term|long term|august|north star/i.test(
+        text,
+      );
+    const belief =
+      /belief|confidence|trust|that's the one|working|moves you toward/i.test(text);
+    return block && vision && belief;
+  }
+
+  if (callType === "coaching" && dim.id === "d6") {
+    const commitment =
+      /session|check-in|check in|message me|logged|deliverable|three sessions/i.test(
+        text,
+      );
+    const deadline =
+      /tuesday|wednesday|friday|monday|by |this week|deadline|after each/i.test(
+        text,
+      );
+    const owner = /you |your job|client|hold you to/i.test(text);
+    return commitment && deadline && owner;
+  }
+
+  if (callType === "coaching" && dim.id === "d7") {
+    const deliverable =
+      /message me|check-in|one line|community platform|post-it|fridge|deliverable|three check-ins/i.test(
+        text,
+      );
+    const confirm =
+      /confirm|does that work|you said|hold you to|spoken|out loud/i.test(text);
+    const consequence =
+      /if you miss|wobble|what happens|otherwise|same night|next morning at the latest/i.test(
+        text,
+      );
+    return deliverable && confirm && consequence;
   }
 
   // Generic: verified support present is enough to keep full marks when
@@ -266,6 +317,81 @@ export function adjudicateFullMarkContradiction(
   };
 }
 
+function strongBandRationale(dim: DimensionResult): string {
+  const pct = Math.round(((dim.score ?? 0) / dim.maxScore) * 100);
+  if (hasDeficiencyLanguage(dim.rationale)) {
+    return hideInternalIds(dim.rationale.trim());
+  }
+  return `Verified evidence supports a ${pct}% score on ${dim.name.toLowerCase()} for this call; the rubric gap to full marks remains on the missing elite criteria.`;
+}
+
+function isBriefContradictory(brief: string, result: EvaluationResult): boolean {
+  const text = brief.trim().toLowerCase();
+  if (!text) return true;
+  const d6 = result.dimensions.find((d) => d.id === "d6");
+  const d10 = result.dimensions.find((d) => d.id === "d10");
+  if (
+    BRIEF_COMMITMENT_GAP_RE.test(text) &&
+    d6 &&
+    d6.score !== null &&
+    d6.score >= strongBandBelowMax(d6.maxScore)
+  ) {
+    return true;
+  }
+  if (
+    BRIEF_BOOKING_GAP_RE.test(text) &&
+    d10 &&
+    d10.score !== null &&
+    d10.score >= d10.maxScore
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function repairBriefConsistency(
+  result: EvaluationResult,
+): { brief: string; repairs: string[] } {
+  const repairs: string[] = [];
+  const brief = hideInternalIds(result.brief.trim());
+  if (!isBriefContradictory(brief, result)) {
+    return { brief, repairs };
+  }
+  const missed = result.dimensions
+    .filter(
+      (d) =>
+        !d.disabled &&
+        !d.notApplicable &&
+        d.score !== null &&
+        d.score < d.maxScore,
+    )
+    .sort(
+      (a, b) =>
+        b.maxScore - b.score! - (a.maxScore - a.score!) ||
+        a.name.localeCompare(b.name),
+    );
+  const top = missed[0];
+  if (!top) {
+    return {
+      brief:
+        "Strong overall performance across every scored dimension on this call.",
+      repairs: ["brief repaired: contradicted full-mark accountability/booking"],
+    };
+  }
+  const action = actionOneThingForDimension(top, result.callType);
+  repairs.push("brief repaired: contradicted scored accountability or booking");
+  if (result.callType === "coaching") {
+    return {
+      brief: `Strong check-in, vision, and close with live booking. The main opportunity is to strengthen ${top.name.toLowerCase()} before the next session.`,
+      repairs,
+    };
+  }
+  return {
+    brief: `${action.recommendation} ${action.impact}`.slice(0, 280),
+    repairs,
+  };
+}
+
 export function repairDimensionConsistency(
   dim: DimensionResult,
   callType: CallType = "kickoff",
@@ -284,6 +410,27 @@ export function repairDimensionConsistency(
 
   if (isFullMarks(dim) && hasDeficiencyLanguage(dim.rationale)) {
     return adjudicateFullMarkContradiction(dim, callType);
+  }
+
+  // Strong/partial scores must not read like full marks when a gap remains.
+  if (
+    isScored(dim) &&
+    !isFullMarks(dim) &&
+    ELITE_PRAISE_RE.test(dim.rationale) &&
+    !hasDeficiencyLanguage(dim.rationale)
+  ) {
+    return {
+      dim: {
+        ...dim,
+        rationale: strongBandRationale(dim),
+        quickFix: dim.quickFix?.trim()
+          ? hideInternalIds(dim.quickFix)
+          : gapQuickFix(dim, callType),
+      },
+      repairs: [
+        `${dim.id}: partial score — rationale aligned to strong band, not full marks`,
+      ],
+    };
   }
 
   let rationale = hideInternalIds(dim.rationale.trim());
@@ -498,7 +645,28 @@ export function actionOneThingForDimension(
           "Choosing a date and time live, confirming it out loud, and sending the invite before hanging up removes ambiguity.",
       };
     }
-    if (dim.id === "d6" || dim.id === "d7" || dim.id === "d11") {
+    if (dim.id === "d7") {
+      return {
+        recommendation: "Set one clear accountability anchor with a consequence.",
+        impact:
+          "Naming a single client-owned deliverable, getting spoken confirmation, and stating what happens if it is missed makes accountability real.",
+      };
+    }
+    if (dim.id === "d5") {
+      return {
+        recommendation: "Frame the adjustment as strategy that protects the long game.",
+        impact:
+          "When a load change is explained as protective strategy rather than retreat, the client keeps confidence in the plan.",
+      };
+    }
+    if (dim.id === "d11") {
+      return {
+        recommendation: "Restate continuity and coach follow-up with timing.",
+        impact:
+          "Clear post-call structure — what the coach owes, by when, and through which channel — keeps momentum between sessions.",
+      };
+    }
+    if (dim.id === "d6") {
       return {
         recommendation: "Close the loop on accountability and continuity.",
         impact:
@@ -581,6 +749,12 @@ export function repairEvaluationConsistency(
     report.repairs.push(...flagRepairs);
   }
 
+  const { brief, repairs: briefRepairs } = repairBriefConsistency(withDims);
+  if (briefRepairs.length) {
+    report.summary_consistent = false;
+    report.repairs.push(...briefRepairs);
+  }
+
   // Projection must not claim a lower score than current after repairs.
   let oneThing = {
     ...result.oneThing,
@@ -605,7 +779,7 @@ export function repairEvaluationConsistency(
   const repaired: EvaluationResult = {
     ...withDims,
     redFlags,
-    brief: hideInternalIds(result.brief),
+    brief,
     oneThing,
   };
 

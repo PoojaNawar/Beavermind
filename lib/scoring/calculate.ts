@@ -20,6 +20,7 @@ import {
   kickoffHasStructuredRecap,
 } from "@/lib/scoring/kickoffClose";
 import {
+  floorEliteScore,
   nextEliteScore,
   repairCoachingBookingDimension,
   repairCoachingMovementDimension,
@@ -183,6 +184,7 @@ export function applyCapsAndBuildResult(args: {
   if (transcript) {
     for (const d of working) {
       d.score = nextEliteScore(rubric.id, d.id, d.score, transcript);
+      d.score = floorEliteScore(rubric.id, d.id, d.score, transcript);
     }
   }
 
