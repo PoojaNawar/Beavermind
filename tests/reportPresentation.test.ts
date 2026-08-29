@@ -377,7 +377,7 @@ describe("evaluation presentation quality cases", () => {
       expect(view?.title).toMatch(/full marks/i);
     }
     expect(refineOneThing(result).recommendation).toMatch(/keep this standard/i);
-    expect(scoreHeadline(result)).toMatch(/strong overall performance|full marks/i);
+    expect(scoreHeadline(result)).toMatch(/exceptional overall performance|strong overall performance|full marks/i);
   });
 });
 
@@ -405,7 +405,7 @@ describe("summary and brief sections stay meaningful", () => {
     expect(brief.well.length).toBeGreaterThan(40);
     expect(brief.well).toMatch(/rapport|goals|journey|support/i);
     expect(brief.well.toLowerCase()).not.toMatch(/next-step clarity/);
-    expect(brief.held).toMatch(/next-step clarity/i);
+    expect(brief.held).toMatch(/next steps|next-step clarity/i);
     expect(brief.held).toMatch(/understanding/i);
     expect(brief.next).toMatch(/diagnostic/i);
     expect(brief.next).toMatch(/film/i);

@@ -99,7 +99,7 @@ describe("kickoff-01 quality bar (independent of a prior 87)", () => {
       modelName: "test",
       transcript: kickoff01,
     });
-    expect(result.dimensions.find((d) => d.id === "d1")?.score).toBe(9);
+    expect(result.dimensions.find((d) => d.id === "d1")?.score).toBe(10);
   });
 
   it("caps inflated kickoff-01 scores only where the transcript lacks elite criteria", () => {

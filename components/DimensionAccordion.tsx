@@ -12,6 +12,7 @@ import {
   evidenceItemLabel,
   notApplicableCopy,
   scoreExplanation,
+  whyNotFullMarksCopy,
 } from "@/lib/ui/reportPresentation";
 import { presentQuickFix } from "@/lib/ui/quickFixDisplay";
 
@@ -180,6 +181,7 @@ export function DimensionAccordion({
         const hasEvidence =
           verifiedItems.length + unverifiedItems.length + ndItems.length > 0;
         const assessment = na ? na.explanation : scoreExplanation(dim);
+        const whyNotFull = na ? null : whyNotFullMarksCopy(dim);
         const evidenceCountParts: string[] = [];
         if (verifiedItems.length > 0) {
           evidenceCountParts.push(`${verifiedItems.length} verified`);
@@ -269,6 +271,17 @@ export function DimensionAccordion({
                     </p>
                   ) : null}
                 </section>
+
+                {whyNotFull ? (
+                  <section className="mt-6 border-t border-[var(--line)] pt-5">
+                    <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                      Why not full marks
+                    </h4>
+                    <p className="mt-2 text-[15px] leading-relaxed text-[var(--ink)]">
+                      {whyNotFull}
+                    </p>
+                  </section>
+                ) : null}
 
                 <section className="mt-6">
                   <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">

@@ -134,6 +134,8 @@ export interface DimensionResult {
   verifiedEvidenceCount: number;
   rejectedEvidenceCount: number;
   evidenceStrength: EvidenceStrength;
+  /** Rubric-grounded reason when score < maxScore; null at full marks. */
+  whyNotFullMarks?: string | null;
 }
 
 export interface RedFlag {

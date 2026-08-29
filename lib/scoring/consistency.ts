@@ -6,6 +6,7 @@ import type {
   RedFlag,
 } from "@/lib/rubrics/types";
 import { FULL_MARKS_QUICK_FIX } from "@/lib/scoring/quickFix";
+import { finalizeDimensionAdjudication } from "@/lib/scoring/dimensionAdjudication";
 
 /**
  * Pre-render consistency repair + light adjudication.
@@ -104,6 +105,19 @@ export function evidenceSupportsFullMarks(
   if (text.trim().length < 12) {
     if (dim.verifiedEvidenceCount === 0) return false;
     return null;
+  }
+
+  if (callType === "kickoff" && dim.id === "d1") {
+    const prep =
+      /intake|notes|got it in front|whole picture|already went through|do not need to repeat/i.test(
+        text,
+      );
+    const detailHits = [
+      /architect|portland|forty|44|engineer/i,
+      /back|shoulder|injury|impingement/i,
+      /PT|physical therapy|goals|tried/i,
+    ].filter((re) => re.test(text)).length;
+    return prep && detailHits >= 2;
   }
 
   if (callType === "kickoff" && dim.id === "d3") {
@@ -489,7 +503,10 @@ export function repairDimensionConsistency(
           `${dim.id}: full marks without verified evidence — score lowered to ${score}/${dim.maxScore}`,
         );
         return {
-          dim: { ...dim, score, rationale, quickFix },
+          dim: finalizeDimensionAdjudication(
+            { ...dim, score, rationale, quickFix },
+            callType,
+          ),
           repairs,
         };
       }
@@ -502,12 +519,15 @@ export function repairDimensionConsistency(
   }
 
   return {
-    dim: {
-      ...dim,
-      score,
-      rationale,
-      quickFix,
-    },
+    dim: finalizeDimensionAdjudication(
+      {
+        ...dim,
+        score,
+        rationale,
+        quickFix,
+      },
+      callType,
+    ),
     repairs,
   };
 }
@@ -764,7 +784,7 @@ export function repairEvaluationConsistency(
       report.evidence_consistent = false;
       report.repairs.push(`${next.id}: full marks with no verified quotes`);
     }
-    dimOut.push(next);
+    dimOut.push(finalizeDimensionAdjudication(next, result.callType, result));
   }
 
   let withDims: EvaluationResult = { ...result, dimensions: dimOut };

@@ -9,6 +9,11 @@ import {
   repairEvaluationConsistency,
 } from "@/lib/scoring/consistency";
 import {
+  heldBackPhrase,
+  performanceLevel,
+  performanceLevelLabel,
+} from "@/lib/scoring/dimensionAdjudication";
+import {
   computeScoreIfApplied,
   resolveLeverageTheme,
   topMissedDimension,
@@ -118,6 +123,8 @@ export function dimensionStatusLabel(
   const na = notApplicableCopy(dim);
   if (na) return "NOT APPLICABLE";
   if (dim.score !== null && dim.score >= dim.maxScore) return "FULL MARKS";
+  const levelLabel = performanceLevelLabel(performanceLevel(dim, result));
+  if (levelLabel) return levelLabel;
   const impact = dimensionImpact(dim, result);
   if (impact === "critical") return "CRITICAL";
   if (impact) return "OPPORTUNITY";
@@ -426,6 +433,9 @@ function wellActionPhrase(dim: DimensionResult, callType: string): string {
 }
 
 function heldDetail(dim: DimensionResult, callType: string): string {
+  if (dim.whyNotFullMarks) {
+    return heldBackPhrase(dim, callType as EvaluationResult["callType"]);
+  }
   if (callType === "kickoff" && dim.id === "d9") {
     return "The main gap was next-step clarity: the coach explained the diagnostic workflow and deadline, but did not fully confirm the client's understanding of what to do next.";
   }
@@ -599,9 +609,23 @@ function buildSummary(
   full: DimensionResult[],
   missed: DimensionResult[],
   callType: string,
+  overallScore?: number,
 ): string {
   if (missed.length === 0) {
-    return "Strong overall performance across every scored dimension. Keep repeating this level of evidence-backed coaching.";
+    return "Exceptional overall performance across every scored dimension. Keep repeating this evidence-backed standard on the next call.";
+  }
+
+  const top = missed[0]!;
+  const topGap = gapOf(top);
+
+  if ((overallScore ?? 0) >= 99 && missed.length === 1 && topGap <= 1) {
+    const area = strengthLabel(top, callType);
+    return `Exceptional overall performance. The only remaining opportunity is a minor refinement in ${area}.`;
+  }
+
+  if ((overallScore ?? 0) >= 95 && missed.length === 1 && topGap <= 2) {
+    const area = strengthLabel(top, callType);
+    return `Strong overall performance with excellent execution across nearly every dimension. A small opportunity remains in ${area}.`;
   }
 
   const preferred =
@@ -613,9 +637,11 @@ function buildSummary(
     preferred.slice(0, 4).map((d) => strengthLabel(d, callType)),
   );
 
-  const top = missed[0]!;
   let opportunity: string;
-  if (callType === "kickoff" && top.id === "d9") {
+  const level = performanceLevel(top);
+  if (level === "minor_opportunity") {
+    opportunity = `The only remaining opportunity is a minor refinement in ${gapPhrase(top, callType)}.`;
+  } else if (callType === "kickoff" && top.id === "d9") {
     opportunity =
       "The main opportunity is to make next-step instructions even clearer and confirm the client's understanding before closing the call.";
   } else if (callType === "coaching" && top.id === "d10") {
@@ -654,7 +680,7 @@ export function validateBriefSections(
   let { summary, well, held, next } = sections;
 
   if (isThinCopy(summary)) {
-    summary = buildSummary(full, missed, result.callType);
+    summary = buildSummary(full, missed, result.callType, result.overallScore);
   }
   if (isThinCopy(well)) {
     well = buildWentWell(full, result.callType);
@@ -702,7 +728,7 @@ export function scoreHeadline(result: EvaluationResult): string {
     .sort((a, b) => gapOf(b) - gapOf(a) || a.name.localeCompare(b.name));
   return validateBriefSections(
     {
-      summary: buildSummary(full, missed, result.callType),
+      summary: buildSummary(full, missed, result.callType, result.overallScore),
       well: "",
       held: "",
       next: "",
@@ -721,7 +747,7 @@ export function briefSections(result: EvaluationResult): BriefSections {
 
   const validated = validateBriefSections(
     {
-      summary: buildSummary(full, missed, result.callType),
+      summary: buildSummary(full, missed, result.callType, result.overallScore),
       well: buildWentWell(full, result.callType),
       held: buildHeldBack(missed, result.callType),
       next: buildWhatNext(missed, result.callType, refined),
@@ -959,6 +985,19 @@ export function evidenceItemLabel(status: string): {
         hint: "Insufficient evidence that the behavior occurred.",
       };
   }
+}
+
+export function whyNotFullMarksCopy(dim: DimensionResult): string | null {
+  if (
+    dim.disabled ||
+    dim.notApplicable ||
+    dim.score === null ||
+    dim.score >= dim.maxScore
+  ) {
+    return null;
+  }
+  const text = dim.whyNotFullMarks?.trim();
+  return text || null;
 }
 
 export function scoreExplanation(dim: DimensionResult): string {

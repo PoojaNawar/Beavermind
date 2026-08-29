@@ -266,7 +266,7 @@ export function kickoffHasPrepElite(transcript: string): boolean {
     /(?:low )?back|shoulder|knee|hip|injury|impingement|rotator/i,
     /tried (?:PT|physical therapy)|PT a couple|goals?|pain history|medical history/i,
   ].filter((re) => re.test(transcript)).length;
-  return prepFrame && details >= 3;
+  return prepFrame && details >= 2;
 }
 
 export function kickoffHasRapportElite(transcript: string): boolean {

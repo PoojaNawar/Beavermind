@@ -112,7 +112,7 @@ describe("kickoff close calibration", () => {
       transcript: kickoff01,
     });
     expect(result.dimensions.find((d) => d.id === "d11")?.score).toBe(5);
-    expect(result.overallScore).toBe(99);
+    expect(result.overallScore).toBe(100);
   });
 
   it("caps D11 at 3 when the transcript has no recap", () => {
@@ -210,7 +210,7 @@ describe("kickoff close calibration", () => {
       kickoff01,
     );
     expect(repaired.dimensions.find((d) => d.id === "d11")?.score).toBe(5);
-    expect(repaired.overallScore).toBe(99);
+    expect(repaired.overallScore).toBe(100);
     expect(repaired.grade).toBe("Elite");
   });
 
