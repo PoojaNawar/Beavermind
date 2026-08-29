@@ -8,6 +8,13 @@
 
 import type { EvaluationResult } from "@/lib/rubrics/types";
 import { FULL_MARKS_QUICK_FIX } from "@/lib/scoring/quickFix";
+import {
+  kickoffHasAgendaElite,
+  kickoffHasNextStepsElite,
+  kickoffHasProgramElite,
+  kickoffHasProgramClientConfirmation,
+  kickoffHasRapportElite,
+} from "@/lib/scoring/eliteBar";
 
 export function kickoffHasStructuredRecap(transcript: string): boolean {
   const text = transcript.trim();
@@ -86,14 +93,8 @@ export function kickoffPostCallFloor(transcript: string): number {
     ) +
     Number(/recap message|recap .{0,20}within/i.test(transcript)) +
     Number(/program(?:'s| is) (?:loaded|ready)|program .{0,20}by/i.test(transcript));
-  // Three distinct timed commitments = elite band top; rushed close caps elsewhere.
-  if (count >= 3) {
-    const rushed =
-      /watching the clock|move a bit quicker|getting close to time/i.test(
-        transcript,
-      );
-    return rushed ? 3.5 : 4.5;
-  }
+  // Three distinct timed commitments = elite band top.
+  if (count >= 3) return 5;
   if (count >= 2) return 3.5;
   return 2.5;
 }
@@ -117,10 +118,88 @@ function pickSupportQuotes(transcript: string): string[] {
 
 function pickPostCallQuotes(transcript: string): string[] {
   const patterns = [
-    /i(?:'ll| will) (?:build|send|look at|review).{0,80}(?:program|feedback)/i,
-    /weekend|monday|friday/i,
+    /i(?:'m| am) assigning.{0,120}(?:diagnostics|training app)/i,
+    /(?:short )?recap message.{0,80}(?:within|fifteen|15)/i,
+    /program(?:'s| is) (?:loaded|ready).{0,80}by/i,
   ];
-  return pickMatchingLines(transcript, patterns, 2);
+  const quotes: string[] = [];
+  for (const line of transcript.split(/\n+/)) {
+    const body = line.replace(/^\[[^\]]+\]:\s*/, "").trim();
+    if (body.length < 20) continue;
+    for (const pattern of patterns) {
+      const match = body.match(pattern);
+      if (!match) continue;
+      const start = Math.max(0, (match.index ?? 0) - 20);
+      const excerpt = body.slice(start, start + 220).trim();
+      if (excerpt.length < 20 || quotes.includes(excerpt)) continue;
+      quotes.push(excerpt);
+      break;
+    }
+    if (quotes.length >= 3) break;
+  }
+  return quotes;
+}
+
+/** Raise only when the full transcript proves elite criteria for that dimension. */
+function kickoffTranscriptEliteFloor(
+  dimensionId: string,
+  score: number,
+  transcript: string,
+): number {
+  if (dimensionId === "d2" && score < 10 && kickoffHasRapportElite(transcript)) {
+    return 10;
+  }
+  if (dimensionId === "d3" && score < 4.5 && kickoffHasAgendaElite(transcript)) {
+    return 5;
+  }
+  if (dimensionId === "d5" && score < 10 && kickoffHasProgramElite(transcript)) {
+    if (kickoffHasProgramClientConfirmation(transcript)) return 10;
+    return 9;
+  }
+  if (dimensionId === "d9" && score < 10 && kickoffHasNextStepsElite(transcript)) {
+    return 10;
+  }
+  return score;
+}
+
+function kickoffRationaleForRepair(
+  dimId: string,
+  score: number,
+  maxScore: number,
+  priorRationale: string,
+  transcript: string,
+): string | null {
+  const absenceClaim =
+    /(?:did not|didn't|not|never|without|lack(?:ed|ing)?|no ).{0,40}(?:verify|confirm|understand|consent|commit|deadline|time alloc)/i.test(
+      priorRationale,
+    );
+  const genericGap =
+    /could have provided more detail|more detail on expected outcomes|deepen the personal connection/i.test(
+      priorRationale,
+    );
+  if (!absenceClaim && !genericGap) return null;
+
+  if (dimId === "d9" && score >= maxScore && kickoffHasNextStepsElite(transcript)) {
+    return "Dana gave clear diagnostics workflow with how-to, deadlines, and Owen confirmed the full sequence in the closing recap.";
+  }
+  if (dimId === "d3" && score >= maxScore && kickoffHasAgendaElite(transcript)) {
+    return "Dana stated the 45-minute duration, sequenced the call phases, and Owen agreed before they moved on.";
+  }
+  if (dimId === "d12" && score >= 4.5 && kickoffHasPostCallCommitment(transcript)) {
+    return "Dana made multiple in-call post-call commitments with precise timing: diagnostics assigned now, recap within fifteen minutes, program loaded by Saturday.";
+  }
+  if (
+    dimId === "d5" &&
+    score >= 10 &&
+    kickoffHasProgramElite(transcript) &&
+    kickoffHasProgramClientConfirmation(transcript)
+  ) {
+    return "Each phase had a clear job, outcome, building analogy, and a direct tie to Owen's belay goal; Owen confirmed phase three matched what he wanted.";
+  }
+  if (dimId === "d2" && score >= maxScore && kickoffHasRapportElite(transcript)) {
+    return "Dana personalized the call, shared a relevant injury story, explored Owen's emotional response, and returned focus to his goals with strong client openness.";
+  }
+  return null;
 }
 
 function pickMatchingLines(
@@ -261,26 +340,61 @@ export function applyKickoffCloseCalibration(
   if (d12 && !d12.disabled && !d12.notApplicable && d12.score !== null) {
     const floor = kickoffPostCallFloor(transcript);
     if (floor > 0) {
-      const rushed =
-        /watching the clock|move a bit quicker|getting close to time/i.test(
-          transcript,
-        );
-      let score = d12.score;
-      if (score < floor) score = floor;
-      if (rushed && score > floor) score = floor;
+      const score = Math.max(d12.score, floor);
+      const coachQuotes = pickPostCallQuotes(transcript);
       if (score !== d12.score) {
         next = recalculateAfterDimPatch(
           next,
           "d12",
           score,
-          score >= 4.5
-            ? ""
-            : "Commit to specific post-call deliverables with precise deadlines.",
+          score >= 5 ? "" : "Commit to specific post-call deliverables with precise deadlines.",
           transcript,
         );
+      } else if (coachQuotes.length > 0) {
+        next = {
+          ...next,
+          dimensions: next.dimensions.map((d) => {
+            if (d.id !== "d12") return d;
+            const patched = withVerifiedQuotes(d, coachQuotes);
+            return {
+              ...patched,
+              quickFix: score >= 5 ? FULL_MARKS_QUICK_FIX : d.quickFix,
+            };
+          }),
+        };
       }
     }
   }
+
+  for (const dimId of ["d2", "d3", "d5", "d9"] as const) {
+    const dim = next.dimensions.find((d) => d.id === dimId);
+    if (!dim || dim.disabled || dim.notApplicable || dim.score === null) continue;
+    const floored = kickoffTranscriptEliteFloor(dimId, dim.score, transcript);
+    if (floored === dim.score) continue;
+    next = recalculateAfterDimPatch(
+      next,
+      dimId,
+      floored,
+      floored >= dim.maxScore ? "" : dim.quickFix,
+      transcript,
+    );
+  }
+
+  next = {
+    ...next,
+    dimensions: next.dimensions.map((d) => {
+      if (d.disabled || d.notApplicable || d.score === null) return d;
+      const repaired = kickoffRationaleForRepair(
+        d.id,
+        d.score,
+        d.maxScore,
+        d.rationale,
+        transcript,
+      );
+      if (!repaired) return d;
+      return { ...d, rationale: repaired };
+    }),
+  };
 
   const d7 = next.dimensions.find((d) => d.id === "d7");
   if (

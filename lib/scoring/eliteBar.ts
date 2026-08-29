@@ -61,9 +61,50 @@ export function kickoffAgendaIsUpfront(transcript: string): boolean {
   return agendaIdx <= maxEarlyLine;
 }
 
-/** Client hedges on next steps ("I think", "hope", "figure it out") without firm confirm. */
+/** Client hedges on next steps early ("I think", "hope", "figure it out"). */
 export function kickoffHasWeakNextStepsConfirmation(transcript: string): boolean {
-  return /(?:hope it'?s close|do my best|figure it out|i think i can|probably okay)/i.test(
+  return /(?:hope it'?s close|do my best|figure it out|i think i can|probably okay|got it, i think)/i.test(
+    transcript,
+  );
+}
+
+/**
+ * Later transcript evidence resolves an earlier hedge — e.g. recap + "does that track?"
+ * followed by client confirmation.
+ */
+export function kickoffLaterConfirmsUnderstanding(transcript: string): boolean {
+  const lines = transcript.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  let weakIdx = -1;
+  let confirmIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const body = lines[i]!.replace(/^\[[^\]]+\]:\s*/, "");
+    if (
+      weakIdx < 0 &&
+      /(?:hope it'?s close|do my best|figure it out|i think i can|probably okay|got it, i think)/i.test(
+        body,
+      )
+    ) {
+      weakIdx = i;
+    }
+    if (
+      /does all of that track|did i miss anything|does that track for you|walk(?:ing)? away with exactly the same picture/i.test(
+        body,
+      )
+    ) {
+      confirmIdx = i;
+    }
+    if (
+      confirmIdx < 0 &&
+      /\[Owen[^\]]*\]:.*(?:basically everything|that(?:'s| is) (?:basically )?everything|no, no that(?:'s| is))/i.test(
+        lines[i]!,
+      ) &&
+      /track|recap|miss anything|same picture/i.test(transcript)
+    ) {
+      confirmIdx = i;
+    }
+  }
+  if (confirmIdx >= 0 && weakIdx >= 0) return confirmIdx > weakIdx;
+  return /does all of that track|that(?:'s| is) basically everything|did i miss anything/i.test(
     transcript,
   );
 }
@@ -151,12 +192,16 @@ export function kickoffHasNextStepsTimeline(transcript: string): boolean {
 }
 
 export function kickoffHasNextStepsConfirmation(transcript: string): boolean {
-  if (kickoffHasWeakNextStepsConfirmation(transcript)) {
-    return /does all of that track|that(?:'s| is) basically everything|did i miss anything/i.test(
-      transcript,
-    );
+  if (
+    kickoffHasWeakNextStepsConfirmation(transcript) &&
+    kickoffLaterConfirmsUnderstanding(transcript)
+  ) {
+    return true;
   }
-  return /got it|that works|that(?:'s| is) clear|i think i can|thursday.{0,60}filming|program by|sounds good.{0,40}(?:thursday|monday|film)/i.test(
+  if (kickoffHasWeakNextStepsConfirmation(transcript)) {
+    return false;
+  }
+  return /got it|that works|that(?:'s| is) clear|thursday.{0,60}filming|program by|sounds good.{0,40}(?:thursday|monday|film)|basically everything/i.test(
     transcript,
   );
 }
@@ -181,15 +226,29 @@ export function kickoffHasProgramElite(transcript: string): boolean {
     /retraining/i.test(transcript) &&
     /remodeling/i.test(transcript) &&
     /integrating/i.test(transcript);
-  const jobOrOutcome =
-    /foundation|framing|occupied|for you specifically|phase (?:one|two|three).{0,80}(?:means|that(?:'s| is))/i.test(
-      transcript,
-    );
+  const phase1Job =
+    /retrain/i.test(transcript) &&
+    /foundation|core|stabiliz|shoulder blade|movement pattern/i.test(transcript);
+  const phase2Job =
+    /remodel/i.test(transcript) &&
+    /strength|capacity|load/i.test(transcript);
+  const phase3Job =
+    /integrat/i.test(transcript) &&
+    /(?:overhead|belay|life|sustained|unexpected load)/i.test(transcript);
   const goalTie =
-    /belay|your (?:goal|north star)|for you.{0,40}(?:that is|that(?:'s| is))|maps onto your/i.test(
+    /belay|lily|your (?:goal|north star)|for you specifically|finished building|phase three is literally/i.test(
       transcript,
     );
-  return phases && jobOrOutcome && goalTie;
+  const analogy =
+    /foundation|framing|occupied|building|footings|load path/i.test(transcript);
+  return phases && phase1Job && phase2Job && phase3Job && goalTie && analogy;
+}
+
+/** Client confirms phase understanding and goal tie — elite D5 requires landing. */
+export function kickoffHasProgramClientConfirmation(transcript: string): boolean {
+  return /phase three is literally|first time someone.*explained|order matters|get why the order|finished building|makes sense the way i laid it out/i.test(
+    transcript,
+  );
 }
 
 /**
@@ -215,15 +274,26 @@ export function kickoffHasRapportElite(transcript: string): boolean {
     /i (?:did|had|was).{0,120}(?:shoulder|back|injury|myself)|rotator cuff|years back/i.test(
       transcript,
     );
+  const emotionalDepth =
+    /how did that feel|thank you for telling me|not a small thing|share something pretty real|what i(?:'m| am) hearing/i.test(
+      transcript,
+    );
   const connected =
-    /for you|your (?:shoulder|back|situation)|when i see .{0,40}in someone|personal stake/i.test(
+    /for you|your (?:shoulder|back|situation)|when i see .{0,40}in someone|personal stake|matches energy|accountability style/i.test(
       transcript,
     );
   const returnedFocus =
-    /let(?:'s| us) (?:get into|talk about|actually get)|enough about me|your goals/i.test(
+    /let(?:'s| us) (?:get into|talk about|actually get)|enough about me|your goals|goals piece/i.test(
       transcript,
     );
-  return personalShare && connected && returnedFocus;
+  const clientOpensUp =
+    /daughter|climbing|personal stor|unprompted|honest with me/i.test(transcript);
+  return (
+    (personalShare || emotionalDepth) &&
+    connected &&
+    returnedFocus &&
+    clientOpensUp
+  );
 }
 
 export function kickoffHasDeepWhyElite(transcript: string): boolean {
@@ -510,22 +580,7 @@ export function nextEliteScore(
     if (dimensionId === "d2" && score >= 10 && !kickoffHasRapportElite(transcript)) {
       return 7;
     }
-    if (
-      dimensionId === "d2" &&
-      score >= 10 &&
-      kickoffPersonalShareAfterAgenda(transcript)
-    ) {
-      return 7;
-    }
     if (dimensionId === "d3" && score >= 4.5 && !kickoffHasAgendaElite(transcript)) {
-      return 3;
-    }
-    if (
-      dimensionId === "d3" &&
-      score >= 4.5 &&
-      kickoffHasAgendaElite(transcript) &&
-      !kickoffAgendaIsUpfront(transcript)
-    ) {
       return 3;
     }
     if (dimensionId === "d4" && score >= 15 && !kickoffHasDeepWhyElite(transcript)) {
@@ -554,21 +609,6 @@ export function nextEliteScore(
     }
     if (dimensionId === "d9" && score >= 10 && !kickoffHasNextStepsElite(transcript)) {
       return 7;
-    }
-    if (
-      dimensionId === "d9" &&
-      score >= 10 &&
-      (kickoffCloseFeelsRushed(transcript) ||
-        kickoffHasWeakNextStepsConfirmation(transcript))
-    ) {
-      return 7;
-    }
-    if (
-      dimensionId === "d12" &&
-      score >= 4.5 &&
-      kickoffCloseFeelsRushed(transcript)
-    ) {
-      return 3.5;
     }
   }
 

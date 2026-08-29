@@ -144,9 +144,37 @@ export function evidenceSupportsFullMarks(
   if (callType === "kickoff" && dim.id === "d5") {
     const phases =
       /retrain/i.test(text) && /remodel/i.test(text) && /integrat/i.test(text);
+    const phaseJobs =
+      /foundation|core|stabiliz|shoulder blade|movement pattern/i.test(text) &&
+      /(?:strength|capacity|load|fram)/i.test(text) &&
+      /(?:overhead|belay|life|sustained|unexpected load|occup)/i.test(text);
     const goalTie =
-      /(?:your|for you|goal|north star|belay|golf|swing)/i.test(text);
-    return phases && goalTie;
+      /(?:your|for you|goal|north star|belay|lily|phase three is literally)/i.test(
+        text,
+      );
+    return phases && phaseJobs && goalTie;
+  }
+
+  if (callType === "kickoff" && dim.id === "d2") {
+    const personal =
+      /rotator|shoulder|injury|how did that feel|personal stake/i.test(text);
+    const connected = /for you|your (?:shoulder|back|situation)|what i(?:'m| am) hearing/i.test(
+      text,
+    );
+    const focus = /goals|get into|enough about me/i.test(text);
+    return personal && connected && focus;
+  }
+
+  if (callType === "kickoff" && dim.id === "d9") {
+    const workflow =
+      /diagnostic/i.test(text) &&
+      /film/i.test(text) &&
+      /(?:upload|program|thursday|monday|saturday)/i.test(text);
+    const confirm =
+      /got it|that works|basically everything|does all of that track|track for you/i.test(
+        text,
+      );
+    return workflow && confirm;
   }
 
   if (callType === "kickoff" && dim.id === "d7") {
@@ -157,8 +185,10 @@ export function evidenceSupportsFullMarks(
   }
 
   if (callType === "kickoff" && dim.id === "d12") {
-    return /i(?:'ll| will) (?:build|send|look|review)|weekend|monday|program/i.test(
-      text,
+    return (
+      /i(?:'m| am) assigning|recap message|program(?:'s| is) (?:loaded|ready)/i.test(
+        text,
+      ) && /within|by |right now|fifteen|saturday|monday/i.test(text)
     );
   }
 

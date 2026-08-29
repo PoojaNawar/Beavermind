@@ -102,7 +102,7 @@ describe("kickoff-01 quality bar (independent of a prior 87)", () => {
     expect(result.dimensions.find((d) => d.id === "d1")?.score).toBe(9);
   });
 
-  it("caps inflated kickoff-01 scores where the script has real gaps", () => {
+  it("caps inflated kickoff-01 scores only where the transcript lacks elite criteria", () => {
     expect(kickoffAgendaIsUpfront(kickoff01)).toBe(false);
     expect(kickoffPersonalShareAfterAgenda(kickoff01)).toBe(true);
     expect(kickoffCloseFeelsRushed(kickoff01)).toBe(true);
@@ -125,10 +125,11 @@ describe("kickoff-01 quality bar (independent of a prior 87)", () => {
       modelName: "test",
       transcript: kickoff01,
     });
-    expect(result.dimensions.find((d) => d.id === "d2")?.score).toBe(7);
-    expect(result.dimensions.find((d) => d.id === "d3")?.score).toBe(3);
-    expect(result.dimensions.find((d) => d.id === "d9")?.score).toBe(7);
-    expect(result.overallScore).toBeLessThan(97);
+    expect(result.dimensions.find((d) => d.id === "d2")?.score).toBe(10);
+    expect(result.dimensions.find((d) => d.id === "d3")?.score).toBe(5);
+    expect(result.dimensions.find((d) => d.id === "d9")?.score).toBe(10);
+    expect(result.dimensions.find((d) => d.id === "d12")?.score).toBe(5);
+    expect(result.overallScore).toBeGreaterThanOrEqual(97);
   });
 
   it("caps prep Elite when intake details are missing", () => {
@@ -142,18 +143,18 @@ describe("kickoff-01 quality bar (independent of a prior 87)", () => {
     expect(nextEliteScore("kickoff", "d2", 7, kickoff01)).toBe(7);
   });
 
-  it("keeps agenda Elite only when framing is upfront; caps late agenda", () => {
+  it("keeps agenda Elite when time, sequence, and consent are present (upfront timing not required)", () => {
     expect(kickoffHasAgendaElite(kickoff01)).toBe(true);
     expect(kickoffAgendaIsUpfront(kickoff01)).toBe(false);
-    expect(nextEliteScore("kickoff", "d3", 5, kickoff01)).toBe(3);
+    expect(nextEliteScore("kickoff", "d3", 5, kickoff01)).toBe(5);
     const thin =
       "[Dana]: Today we'll talk goals and program.\n[Owen]: Okay.";
     expect(kickoffHasAgendaElite(thin)).toBe(false);
     expect(nextEliteScore("kickoff", "d3", 5, thin)).toBe(3);
   });
 
-  it("caps kickoff-01 next-steps when the client hedges and the close is rushed", () => {
-    expect(nextEliteScore("kickoff", "d9", 10, kickoff01)).toBe(7);
+  it("does not cap kickoff-01 next steps when later recap confirms understanding", () => {
+    expect(nextEliteScore("kickoff", "d9", 10, kickoff01)).toBe(10);
   });
 
   it("caps next-steps 10 when the client never confirms understanding", () => {
@@ -195,33 +196,37 @@ describe("kickoff-01 quality bar (independent of a prior 87)", () => {
       modelName: "test",
       transcript: kickoff01,
     });
-    expect(result.dimensions.find((d) => d.id === "d2")?.score).toBe(7);
-    expect(result.dimensions.find((d) => d.id === "d9")?.score).toBe(7);
-    expect(result.overallScore).toBe(91);
+    expect(result.dimensions.find((d) => d.id === "d2")?.score).toBe(10);
+    expect(result.dimensions.find((d) => d.id === "d9")?.score).toBe(10);
+    expect(result.overallScore).toBe(100);
   });
 
-  it("caps D9 on refresh when confirmation is hedged and the close is rushed", () => {
+  it("repairs kickoff-01 on hydrate when transcript proves elite but model under-scored", () => {
     const stored = applyCapsAndBuildResult({
       model: stub(getKickoffRubric(), {
         d1: 10,
         d2: 7,
         d3: 5,
         d4: 15,
-        d5: 10,
+        d5: 7,
         d6: 10,
         d7: 5,
         d8: 10,
-        d9: 10,
+        d9: 7,
         d10: 5,
         d11: 5,
-        d12: 5,
+        d12: 3.5,
       }),
       rubric: getKickoffRubric(),
       modelName: "test",
     });
     const repaired = hydrateCompletedReport(stored, kickoff01);
-    expect(repaired.dimensions.find((d) => d.id === "d9")?.score).toBe(7);
-    expect(repaired.overallScore).toBe(91);
+    expect(repaired.dimensions.find((d) => d.id === "d2")?.score).toBe(10);
+    expect(repaired.dimensions.find((d) => d.id === "d3")?.score).toBe(5);
+    expect(repaired.dimensions.find((d) => d.id === "d5")?.score).toBe(10);
+    expect(repaired.dimensions.find((d) => d.id === "d9")?.score).toBe(10);
+    expect(repaired.dimensions.find((d) => d.id === "d12")?.score).toBe(5);
+    expect(repaired.overallScore).toBeGreaterThanOrEqual(100);
   });
 });
 

@@ -16,7 +16,8 @@ export const kickoffRubric: Rubric = {
     "D2: a personal story is not automatically Elite. Score relevance, whether it showed understanding, resonance, returning focus to the client, and whether it felt natural.",
     "D4: score whether the emotional why was identified, stated back, confirmed, turned into a North Star, and locked to a 30-day marker. Do not penalize discovery that happens after agenda if that work is complete.",
     "D5: naming the three phases is not Elite. Score what each phase does, the outcome, analogy if useful, and the tie to this client's goal.",
-    "D9: the client must understand what, how, where, and by when, and the coach must verify understanding. Equivalent confirmation counts; a scripted repeat-back is not required.",
+    "D9: the client must understand what, how, where, and by when, and the coach must verify understanding. Equivalent confirmation counts; a scripted repeat-back is not required. A later closing recap confirmation satisfies verification even if the client hedged earlier.",
+    "Evaluate dimensions as a sequence across the full transcript — later evidence can resolve earlier ambiguity.",
     "D7 and D12 score what is communicated in-call, not post-call delivery.",
   ],
   gradeBands: [
