@@ -100,28 +100,13 @@ describe("dimensionAdjudication", () => {
     expect(cleaned.verifiedEvidenceCount).toBe(1);
   });
 
-  it("does not recommend prep fix when intake evidence already present", () => {
-    const finalized = finalizeDimensionAdjudication(
-      dim({
-        id: "d1",
-        score: 9,
-        maxScore: 10,
-        quickFix: "Name two intake details in the first minutes.",
-        evidence: [
-          {
-            quote:
-              "I know you're forty-four, you're an architect out there in Portland, you've been dealing with the low back thing",
-            speaker: "Dana",
-            location: null,
-            demonstrated: true,
-            verificationStatus: "verified",
-          },
-        ],
-      }),
+  it("whyNotFullMarks cites rubric criteria without vague coaching language", () => {
+    const partial = finalizeDimensionAdjudication(
+      dim({ id: "d1", score: 9, maxScore: 10 }),
       "kickoff",
     );
-    expect(finalized.quickFix).toMatch(/intake details/i);
-    expect(computeWhyNotFullMarks(finalized, "kickoff")).toBeTruthy();
+    expect(partial.whyNotFullMarks).toMatch(/rubric requires/i);
+    expect(partial.whyNotFullMarks).not.toMatch(/surface|could have|stronger|deepen/i);
   });
 });
 
@@ -231,7 +216,9 @@ describe("kickoff-01 regression", () => {
     );
     const d12 = result.dimensions.find((d) => d.id === "d12")!;
     expect(d12.score).toBe(5);
-    expect(d12.evidence.length).toBeGreaterThanOrEqual(1);
+    expect(d12.evidence.length).toBeGreaterThanOrEqual(3);
     expect(d12.evidence[0]!.quote).toMatch(/^I(?:'m| am) assigning your diagnostics/i);
+    expect(d12.evidence[0]!.speaker).toMatch(/Dana/i);
+    expect(d12.rationale).toMatch(/three/i);
   });
 });

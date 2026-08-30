@@ -575,7 +575,7 @@ function buildHeldBack(
   callType: string,
 ): string {
   if (missed.length === 0) {
-    return "Nothing material held this score back.";
+    return "Exceptional performance across every evaluated dimension. No material gaps were identified.";
   }
   const primary = heldDetail(missed[0]!, callType);
   if (missed.length === 1) return primary;

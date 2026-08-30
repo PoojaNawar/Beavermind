@@ -7,6 +7,7 @@
  */
 
 import type { EvaluationResult } from "@/lib/rubrics/types";
+import { isBrokenEvidenceQuote } from "@/lib/scoring/dimensionAdjudication";
 import { FULL_MARKS_QUICK_FIX } from "@/lib/scoring/quickFix";
 import {
   kickoffHasAgendaElite,
@@ -117,29 +118,80 @@ function pickSupportQuotes(transcript: string): string[] {
   return pickMatchingLines(transcript, patterns, 3);
 }
 
-function pickPostCallQuotes(transcript: string): string[] {
+type CoachQuote = { quote: string; speaker: string | null };
+
+function parseSpeakerLine(line: string): CoachQuote & { body: string } {
+  const normalized = line.replace(/\r$/, "").trim();
+  const match = normalized.match(/^\[([^\]]+)\]:\s*(.*)/);
+  if (!match) {
+    return { speaker: null, quote: "", body: normalized };
+  }
+  return { speaker: match[1]!.trim(), quote: "", body: match[2]!.trim() };
+}
+
+function pickPostCallQuotes(transcript: string): CoachQuote[] {
   const patterns: RegExp[] = [
-    /I(?:'m| am) assigning your diagnostics[^.!?]*[.!?]?/i,
-    /(?:short )?recap message[^.!?]*(?:within|fifteen|15)[^.!?]*[.!?]?/i,
-    /program(?:'s| is) (?:loaded|ready)[^.!?]*by[^.!?]*[.!?]?/i,
+    /I(?:'m| am) assigning your diagnostics[^.!?]*[.!?]/i,
+    /You'll also get a (?:short )?recap message[^.!?]*[.!?]/i,
+    /(?:And like we said, )?program(?:'s| is) (?:loaded|ready)[^.!?]*by[^.!?]*[.!?]/i,
   ];
-  const quotes: string[] = [];
+  const fallbackPatterns: RegExp[] = [
+    /I(?:'m| am) assigning your diagnostics[^.!?]*[.!?]/i,
+    /(?:You'll also get a )?(?:short )?recap message[^.!?]*(?:within|fifteen|15)[^.!?]*[.!?]/i,
+    /(?:And like we said, )?program(?:'s| is) (?:loaded|ready)[^.!?]*by[^.!?]*[.!?]/i,
+  ];
+  const quotes: CoachQuote[] = [];
   for (const line of transcript.split(/\n+/)) {
-    const body = line.replace(/^\[[^\]]+\]:\s*/, "").trim();
+    const { speaker, body } = parseSpeakerLine(line);
     if (body.length < 20) continue;
-    for (const pattern of patterns) {
-      const match = body.match(pattern);
+    for (let i = 0; i < patterns.length; i++) {
+      if (quotes[i]) continue;
+      const match = body.match(patterns[i]!) ?? body.match(fallbackPatterns[i]!);
       if (!match) continue;
       let excerpt = match[0].trim();
       if (!/[.!?]$/.test(excerpt)) excerpt = `${excerpt}.`;
-      if (excerpt.length < 24 || quotes.some((q) => q.includes(excerpt.slice(0, 28)))) {
+      if (
+        excerpt.length < 24 ||
+        quotes.some((q) => q.quote.includes(excerpt.slice(0, 28)))
+      ) {
         continue;
       }
-      quotes.push(excerpt);
+      quotes[i] = { quote: excerpt, speaker };
     }
-    if (quotes.length >= 3) break;
+    if (quotes.filter(Boolean).length >= 3) break;
   }
-  return quotes.slice(0, 3);
+  return quotes.filter((q): q is CoachQuote => Boolean(q?.quote));
+}
+
+function postCallRationale(quoteCount: number): string {
+  if (quoteCount >= 3) {
+    return "The coach made three in-call post-call commitments with precise timing: diagnostics assigned now, recap within fifteen minutes, and program loaded by Saturday.";
+  }
+  if (quoteCount === 2) {
+    return "The coach made two explicit in-call post-call commitments with precise timing.";
+  }
+  return "The coach made an explicit in-call post-call commitment with precise timing.";
+}
+
+function needsPostCallEvidenceRefresh(
+  dim: EvaluationResult["dimensions"][number],
+  coachQuotes: CoachQuote[],
+): boolean {
+  if (coachQuotes.length === 0) return false;
+  const verified = dim.evidence.filter(
+    (e) =>
+      (e.verificationStatus === "verified" || e.demonstrated) &&
+      !isBrokenEvidenceQuote(e.quote),
+  );
+  if (verified.length < coachQuotes.length) return true;
+  if (dim.evidence.some((e) => isBrokenEvidenceQuote(e.quote))) return true;
+  if (/multiple|several|three commitments/i.test(dim.rationale) && verified.length < 2) {
+    return true;
+  }
+  if (verified.some((e) => !e.speaker) && coachQuotes.every((q) => q.speaker)) {
+    return true;
+  }
+  return false;
 }
 
 /** Raise only when the full transcript proves elite criteria for that dimension. */
@@ -243,15 +295,19 @@ function withVerifiedQuotes<T extends {
   rejectedEvidenceCount?: number;
   evidenceFound?: boolean;
   notDemonstrated?: boolean;
-}>(dim: T, quotes: string[]): T {
+}>(dim: T, quotes: Array<string | CoachQuote>): T {
   if (quotes.length === 0) return dim;
-  const evidence = quotes.map((quote) => ({
-    quote,
-    speaker: null as string | null,
-    location: null as string | null,
-    demonstrated: true,
-    verificationStatus: "verified",
-  }));
+  const evidence = quotes.map((item) => {
+    const quote = typeof item === "string" ? item : item.quote;
+    const speaker = typeof item === "string" ? null : item.speaker ?? null;
+    return {
+      quote,
+      speaker,
+      location: null as string | null,
+      demonstrated: true,
+      verificationStatus: "verified" as const,
+    };
+  });
   return {
     ...dim,
     evidence: evidence as T["evidence"],
@@ -308,7 +364,14 @@ function recalculateAfterDimPatch(
         patched = withVerifiedQuotes(patched, pickSupportQuotes(transcript));
       }
       if (transcript && dimId === "d12") {
-        patched = withVerifiedQuotes(patched, pickPostCallQuotes(transcript));
+        const coachQuotes = pickPostCallQuotes(transcript);
+        patched = withVerifiedQuotes(patched, coachQuotes);
+        if (coachQuotes.length > 0) {
+          patched = {
+            ...patched,
+            rationale: postCallRationale(coachQuotes.length),
+          };
+        }
       }
       return patched;
     }),
@@ -362,7 +425,7 @@ export function applyKickoffCloseCalibration(
           score >= 5 ? "" : "Commit to specific post-call deliverables with precise deadlines.",
           transcript,
         );
-      } else if (coachQuotes.length > 0) {
+      } else if (needsPostCallEvidenceRefresh(d12, coachQuotes)) {
         next = {
           ...next,
           dimensions: next.dimensions.map((d) => {
@@ -370,6 +433,7 @@ export function applyKickoffCloseCalibration(
             const patched = withVerifiedQuotes(d, coachQuotes);
             return {
               ...patched,
+              rationale: postCallRationale(coachQuotes.length),
               quickFix: score >= 5 ? FULL_MARKS_QUICK_FIX : d.quickFix,
             };
           }),

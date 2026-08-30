@@ -456,6 +456,33 @@ export function repairDimensionConsistency(
     return adjudicateFullMarkContradiction(dim, callType);
   }
 
+  // Partial scores within one point: do not keep a deduction when verified evidence satisfies the rubric.
+  if (
+    !isFullMarks(dim) &&
+    dim.score !== null &&
+    dim.maxScore - dim.score <= 1 &&
+    dim.verifiedEvidenceCount > 0
+  ) {
+    const support = evidenceSupportsFullMarks(dim, callType);
+    if (support === true) {
+      repairs.push(
+        `${dim.id}: partial score raised — verified evidence satisfies the rubric elite bar`,
+      );
+      return {
+        dim: finalizeDimensionAdjudication(
+          {
+            ...dim,
+            score: dim.maxScore,
+            rationale: fullMarkRationale(dim),
+            quickFix: FULL_MARKS_QUICK_FIX,
+          },
+          callType,
+        ),
+        repairs,
+      };
+    }
+  }
+
   // Strong/partial scores must not read like full marks when a gap remains.
   if (
     isScored(dim) &&

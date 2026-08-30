@@ -18,6 +18,26 @@ import { presentQuickFix } from "@/lib/ui/quickFixDisplay";
 
 const QUOTE_PREVIEW_CHARS = 160;
 
+function truncateAtBoundary(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  const slice = text.slice(0, maxChars);
+  const sentenceEnd = Math.max(
+    slice.lastIndexOf(". "),
+    slice.lastIndexOf("! "),
+    slice.lastIndexOf("? "),
+    slice.lastIndexOf(".\""),
+    slice.lastIndexOf(".”"),
+  );
+  if (sentenceEnd > maxChars * 0.45) {
+    return slice.slice(0, sentenceEnd + 1).trimEnd();
+  }
+  const wordEnd = slice.lastIndexOf(" ");
+  if (wordEnd > maxChars * 0.55) {
+    return slice.slice(0, wordEnd).trimEnd();
+  }
+  return slice.trimEnd();
+}
+
 function QuickFixBlock({
   dim,
   callType,
@@ -73,9 +93,10 @@ function EvidenceQuote({
       : `${ev.speaker ? `${ev.speaker}: ` : ""}“${ev.quote}”`;
   const needsCollapse = full.length > QUOTE_PREVIEW_CHARS;
   const [expanded, setExpanded] = useState(false);
+  const preview = truncateAtBoundary(full, QUOTE_PREVIEW_CHARS);
   const shown =
     needsCollapse && !expanded
-      ? `${full.slice(0, QUOTE_PREVIEW_CHARS).trimEnd()}…`
+      ? `${preview}…`
       : full;
 
   return (

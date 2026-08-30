@@ -135,9 +135,9 @@ export function computeWhyNotFullMarks(
     switch (dim.id) {
       case "d1":
         if (gap <= 1) {
-          return "The rubric requires fully reviewed intake with specific goals, injuries, and at least two CRM details surfaced in the first minutes; prep was visible but one elite signal was not fully demonstrated in verified evidence.";
+          return "The rubric requires fully reviewed intake with specific goals, injuries, and at least two CRM details; verified evidence did not fully demonstrate that bar.";
         }
-        return "The rubric requires clear pre-call preparation with specific intake details early; the transcript does not fully demonstrate that bar.";
+        return "The rubric requires clear pre-call preparation with specific intake details; the transcript does not fully demonstrate that bar.";
       case "d2":
         return "The rubric requires warm, personalized rapport with a relevant personal share that demonstrates understanding, returns focus to the client, and helps the client open up; one of those elite signals was not fully demonstrated.";
       case "d3":
