@@ -7,6 +7,7 @@ import { applyKickoffCloseCalibration } from "@/lib/scoring/kickoffClose";
 import { applyTranscriptAutoCaps } from "@/lib/scoring/transcriptCaps";
 import { hydrateCompletedReport } from "@/lib/scoring/hydrateReport";
 import { applyReportPresentation } from "@/lib/ui/reportPresentation";
+import { kickoffPostCallQuickFix } from "@/lib/scoring/dimensionAdjudication";
 import type { EvaluationResult } from "@/lib/rubrics/types";
 
 const kickoff02 = readFileSync("transcripts/kickoff-02.txt", "utf8");
@@ -171,5 +172,92 @@ describe("kickoff-02 system calibration", () => {
     expect(report.dimensions.find((d) => d.id === "d1")?.score).toBe(10);
     const d4 = report.dimensions.find((d) => d.id === "d4")!;
     expect(d4.whyNotFullMarks).toMatch(/North Star/i);
+  });
+
+  it("prioritizes live booking One Thing when D10 is zero even with no-north-star cap", () => {
+    const raw = applyCapsAndBuildResult({
+      model: {
+        oneThing: {
+          recommendation: "Lock the North Star and a 30-day marker.",
+          impact: "North star impact.",
+          estimatedPointsGained: 5,
+          scoreIfAppliedBasis: "d4",
+        },
+        brief: "Solid preparation and rapport but lacked a live booking for the next call.",
+        redFlags: [],
+        firedCapIds: ["no-north-star"],
+        notes: "",
+        dimensions: getKickoffRubric().dimensions.map((d) => ({
+          id: d.id,
+          score:
+            d.id === "d4"
+              ? 10
+              : d.id === "d10"
+                ? 0
+                : d.id === "d7"
+                  ? 5
+                  : 7,
+          disabled: false,
+          disabledReason: null,
+          notApplicable: false,
+          notApplicableReason: null,
+          band: null,
+          rationale: "x",
+          evidence: [],
+          quickFix: "",
+          notDemonstrated: false,
+        })),
+      },
+      rubric: getKickoffRubric(),
+      modelName: "test",
+      transcript: kickoff02,
+    }) as EvaluationResult;
+
+    const report = applyReportPresentation(
+      hydrateCompletedReport(raw, kickoff02),
+    );
+    expect(report.oneThing.recommendation).toMatch(/book the next call live/i);
+    expect(report.brief).not.toMatch(/solid preparation and rapport/i);
+  });
+
+  it("uses targeted D12 quick fix when program-build evidence already exists", () => {
+    const dim = {
+      id: "d12",
+      name: "Post-Call Execution",
+      score: 2.5,
+      maxScore: 5,
+      disabled: false,
+      disabledReason: null,
+      notApplicable: false,
+      notApplicableReason: null,
+      band: null,
+      rationale: "Two commitments.",
+      evidence: [
+        {
+          quote:
+            "If you can get those uploaded by Friday, that gives me the weekend to build out your actual program, so you'd have it ready to start Monday.",
+          speaker: "Ivan Petrov",
+          location: null,
+          demonstrated: true,
+          verificationStatus: "verified" as const,
+        },
+        {
+          quote:
+            "I'll build your program over the weekend, you'll be live Monday, and just message me in the app if anything comes up before then.",
+          speaker: "Ivan Petrov",
+          location: null,
+          demonstrated: true,
+          verificationStatus: "verified" as const,
+        },
+      ],
+      quickFix: "Specify multiple explicit commitments with precise deadlines.",
+      notDemonstrated: false,
+      evidenceFound: true,
+      verifiedEvidenceCount: 2,
+      rejectedEvidenceCount: 0,
+      evidenceStrength: "high" as const,
+      whyNotFullMarks: null,
+    };
+    expect(kickoffPostCallQuickFix(dim)).toMatch(/one more in-call post-call commitment/i);
   });
 });

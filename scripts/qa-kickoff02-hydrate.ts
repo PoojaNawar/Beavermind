@@ -49,4 +49,7 @@ for (const d of report.dimensions) {
   if (d.whyNotFullMarks) {
     console.log(`    Why not full: ${d.whyNotFullMarks}`);
   }
+  if (d.id === "d12" && d.quickFix) {
+    console.log(`    Quick fix: ${d.quickFix}`);
+  }
 }

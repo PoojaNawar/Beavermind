@@ -122,6 +122,38 @@ function rubricQuickFix(dimId: string, callType: CallType): string | null {
   return map[dimId]?.trim() || null;
 }
 
+const POST_CALL_COMMITMENT_RE =
+  /assigning your diagnostics|recap message|short recap|build (?:out )?your (?:actual )?program|build your program|over the weekend|ready to start|live monday|program.*loaded|ready.*by/i;
+
+function countPostCallCommitmentSignals(dim: DimensionResult): number {
+  const items = dim.evidence.filter(
+    (e) =>
+      (e.verificationStatus === "verified" || e.demonstrated) &&
+      POST_CALL_COMMITMENT_RE.test(e.quote),
+  );
+  if (items.length >= 2) return items.length;
+  const blob = items.map((e) => e.quote).join(" ").toLowerCase();
+  if (!blob.trim()) return 0;
+  return [
+    /assigning your diagnostics/i,
+    /recap message|short recap/i,
+    /build (?:out )?your (?:actual )?program|build your program|over the weekend|ready to start|live monday/i,
+  ].filter((re) => re.test(blob)).length;
+}
+
+export function kickoffPostCallQuickFix(dim: DimensionResult): string {
+  if (isFullMarks(dim)) return FULL_MARKS_QUICK_FIX;
+  const signals = countPostCallCommitmentSignals(dim);
+  if (signals >= 3) return FULL_MARKS_QUICK_FIX;
+  if (signals >= 2) {
+    return "Name one more in-call post-call commitment with a precise deadline before hanging up.";
+  }
+  if (signals >= 1) {
+    return "Add a second timed in-call commitment with an explicit deadline before closing.";
+  }
+  return KICKOFF_QUICK_FIX.d12 ?? "Commit to specific post-call deliverables with precise deadlines.";
+}
+
 /** Rubric-grounded gap text when score < max. Null when no defensible gap. */
 export function computeWhyNotFullMarks(
   dim: DimensionResult,
@@ -230,7 +262,8 @@ function quickFixContradictsEvidence(
     [/reference two specific intake|surface prep|intake details early/i, /forty|architect|portland|intake|PT|shoulder|back/i],
     [/confirm the workflow|confirm understanding|repeat.back/i, /basically everything|does all of that track|got it|that works/i],
     [/state the time.*three sequenced|agenda.*consent/i, /forty-five minutes|shape of it|sound good|that works/i],
-    [/three timed commitments|post-call deliverables/i, /assigning your diagnostics|recap message|program.*loaded|ready.*by/i],
+    [/three timed commitments|post-call deliverables/i, /assigning your diagnostics|recap message|program.*loaded|ready.*by|build (?:out )?your program|over the weekend|live monday/i],
+    [/specify multiple explicit|multiple explicit commitments|precise deadlines to enhance|add a second timed in-call commitment/i, /build (?:out )?your program|over the weekend|ready to start|live monday/i],
   ];
 
   return pairs.some(([fixRe, evRe]) => fixRe.test(qf) && evRe.test(blob));
@@ -300,6 +333,16 @@ export function finalizeDimensionAdjudication(
 
   if (quickFixContradictsEvidence(next, quickFix) && rubricFix) {
     quickFix = rubricFix;
+  }
+
+  if (
+    callType === "kickoff" &&
+    next.id === "d12" &&
+    !isFullMarks(next) &&
+    (quickFixContradictsEvidence(next, quickFix) ||
+      /commit to specific post-call|specify multiple explicit/i.test(quickFix))
+  ) {
+    quickFix = kickoffPostCallQuickFix(next);
   }
 
   void result;

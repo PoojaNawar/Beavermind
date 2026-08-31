@@ -7,7 +7,7 @@
  */
 
 import type { EvaluationResult } from "@/lib/rubrics/types";
-import { isBrokenEvidenceQuote } from "@/lib/scoring/dimensionAdjudication";
+import { isBrokenEvidenceQuote, kickoffPostCallQuickFix } from "@/lib/scoring/dimensionAdjudication";
 import { FULL_MARKS_QUICK_FIX } from "@/lib/scoring/quickFix";
 import {
   kickoffHasAgendaElite,
@@ -372,6 +372,7 @@ function recalculateAfterDimPatch(
           patched = {
             ...patched,
             rationale: postCallRationale(coachQuotes.length),
+            quickFix: kickoffPostCallQuickFix(patched),
           };
         }
       }
@@ -436,7 +437,7 @@ export function applyKickoffCloseCalibration(
             return {
               ...patched,
               rationale: postCallRationale(coachQuotes.length),
-              quickFix: score >= 5 ? FULL_MARKS_QUICK_FIX : d.quickFix,
+              quickFix: kickoffPostCallQuickFix({ ...patched, score }),
             };
           }),
         };

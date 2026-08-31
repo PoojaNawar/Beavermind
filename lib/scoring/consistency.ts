@@ -705,6 +705,13 @@ export function actionOneThingForDimension(
           "When the emotional why is named, confirmed, and tied to a near-term marker, the rest of the program has something concrete to serve.",
       };
     }
+    if (dim.id === "d10") {
+      return {
+        recommendation: "Book the next call live before hanging up.",
+        impact:
+          "Choosing a date and time live, confirming it out loud, and sending the invite before hanging up keeps accountability and continuity intact.",
+      };
+    }
     if (dim.id === "d11") {
       return {
         recommendation: "Close with an emotionally anchored recap.",

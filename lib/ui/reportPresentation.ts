@@ -77,6 +77,28 @@ function isMissed(dim: DimensionResult): boolean {
   );
 }
 
+function compareMissed(a: DimensionResult, b: DimensionResult): number {
+  const gapDiff = gapOf(b) - gapOf(a);
+  if (gapDiff !== 0) return gapDiff;
+  const levelRank = (dim: DimensionResult) => {
+    const level = performanceLevel(dim);
+    if (level === "critical_miss") return 0;
+    if (level === "significant_gap") return 1;
+    if (level === "meaningful_opportunity") return 2;
+    return 3;
+  };
+  const levelDiff = levelRank(a) - levelRank(b);
+  if (levelDiff !== 0) return levelDiff;
+  const ratioA = a.score! / a.maxScore;
+  const ratioB = b.score! / b.maxScore;
+  if (ratioA !== ratioB) return ratioA - ratioB;
+  return a.id.localeCompare(b.id);
+}
+
+function sortMissed(missed: DimensionResult[]): DimensionResult[] {
+  return [...missed].sort(compareMissed);
+}
+
 function dimById(
   result: EvaluationResult,
   id: string,
@@ -432,9 +454,9 @@ function wellActionPhrase(dim: DimensionResult, callType: string): string {
   return `delivered strong ${strengthLabel(dim, callType)}`;
 }
 
-function heldDetail(dim: DimensionResult, callType: string): string {
+function heldDetail(dim: DimensionResult, callType: string, result?: EvaluationResult): string {
   if (dim.whyNotFullMarks) {
-    return heldBackPhrase(dim, callType as EvaluationResult["callType"]);
+    return heldBackPhrase(dim, callType as EvaluationResult["callType"], result);
   }
   if (callType === "kickoff" && dim.id === "d9") {
     return "The main gap was next-step clarity: the coach explained the diagnostic workflow and deadline, but did not fully confirm the client's understanding of what to do next.";
@@ -573,11 +595,12 @@ function buildWentWell(
 function buildHeldBack(
   missed: DimensionResult[],
   callType: string,
+  result?: EvaluationResult,
 ): string {
   if (missed.length === 0) {
     return "Exceptional performance across every evaluated dimension. No material gaps were identified.";
   }
-  const primary = heldDetail(missed[0]!, callType);
+  const primary = heldDetail(missed[0]!, callType, result);
   if (missed.length === 1) return primary;
 
   const extras = uniquePhrases(
@@ -672,9 +695,7 @@ export function validateBriefSections(
 ): BriefSections & { summary: string } {
   const scored = scoredDimensions(result);
   const full = scored.filter((d) => d.score === d.maxScore);
-  const missed = scored
-    .filter(isMissed)
-    .sort((a, b) => gapOf(b) - gapOf(a) || a.name.localeCompare(b.name));
+  const missed = sortMissed(scored.filter(isMissed));
   const refined = refineOneThing(result);
 
   let { summary, well, held, next } = sections;
@@ -686,7 +707,7 @@ export function validateBriefSections(
     well = buildWentWell(full, result.callType);
   }
   if (isThinCopy(held)) {
-    held = buildHeldBack(missed, result.callType);
+    held = buildHeldBack(missed, result.callType, result);
   }
   if (isThinCopy(next)) {
     next = buildWhatNext(missed, result.callType, refined);
@@ -709,7 +730,7 @@ export function validateBriefSections(
       held.toLowerCase().includes(topGap.split(" ")[0]!) ||
       held.toLowerCase().includes(topLabel.split(" ")[0]!) ||
       /main gap|lacked|did not|missing|not fully/i.test(held);
-    if (!heldOk) held = buildHeldBack(missed, result.callType);
+    if (!heldOk) held = buildHeldBack(missed, result.callType, result);
   }
 
   return {
@@ -723,9 +744,7 @@ export function validateBriefSections(
 export function scoreHeadline(result: EvaluationResult): string {
   const scored = scoredDimensions(result);
   const full = scored.filter((d) => d.score === d.maxScore);
-  const missed = scored
-    .filter(isMissed)
-    .sort((a, b) => gapOf(b) - gapOf(a) || a.name.localeCompare(b.name));
+  const missed = sortMissed(scored.filter(isMissed));
   return validateBriefSections(
     {
       summary: buildSummary(full, missed, result.callType, result.overallScore),
@@ -740,16 +759,14 @@ export function scoreHeadline(result: EvaluationResult): string {
 export function briefSections(result: EvaluationResult): BriefSections {
   const scored = scoredDimensions(result);
   const full = scored.filter((d) => d.score === d.maxScore);
-  const missed = scored
-    .filter(isMissed)
-    .sort((a, b) => gapOf(b) - gapOf(a) || a.name.localeCompare(b.name));
+  const missed = sortMissed(scored.filter(isMissed));
   const refined = refineOneThing(result);
 
   const validated = validateBriefSections(
     {
       summary: buildSummary(full, missed, result.callType, result.overallScore),
       well: buildWentWell(full, result.callType),
-      held: buildHeldBack(missed, result.callType),
+      held: buildHeldBack(missed, result.callType, result),
       next: buildWhatNext(missed, result.callType, refined),
     },
     result,
@@ -776,9 +793,14 @@ function copyForTheme(
       };
     case "live-booking":
       return {
-        recommendation: "Book the next call before the session ends.",
+        recommendation:
+          result.callType === "kickoff"
+            ? "Book the next call live before hanging up."
+            : "Book the next call before the session ends.",
         impact:
-          "Choosing a date and time live, confirming it out loud, and sending the invite before hanging up removes ambiguity and keeps the coaching relationship moving.",
+          result.callType === "kickoff"
+            ? "Choosing a date and time live, confirming it out loud, and sending the invite before hanging up keeps accountability and continuity intact."
+            : "Choosing a date and time live, confirming it out loud, and sending the invite before hanging up removes ambiguity and keeps the coaching relationship moving.",
       };
     case "vision":
       return {
@@ -809,7 +831,7 @@ function copyForTheme(
 function recommendationMatchesTheme(recommendation: string, theme: LeverageTheme): boolean {
   const rec = recommendation.toLowerCase();
   if (theme === "live-booking") {
-    return /book(ing)? the next call|book(ed)? live|calendar invite/.test(rec);
+    return /book(ing)? the next call|book(ed)? live|calendar invite|before hanging up/.test(rec);
   }
   if (theme === "accountability-loop") {
     return (
@@ -937,10 +959,11 @@ export function applyReportPresentation(
 ): EvaluationResult {
   const { result: consistent } = repairEvaluationConsistency(result);
   const oneThing = refineOneThing(consistent);
+  const headline = scoreHeadline({ ...consistent, oneThing });
   return {
     ...consistent,
     oneThing,
-    brief: hideInternalIds(consistent.brief),
+    brief: headline,
     dimensions: consistent.dimensions.map((dim) => ({
       ...dim,
       rationale: hideInternalIds(dim.rationale),

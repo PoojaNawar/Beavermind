@@ -6,6 +6,7 @@ import { getKickoffRubric } from "@/lib/rubrics/kickoff";
 import { hydrateEvaluationResult } from "@/lib/transcripts/evidenceQuality";
 import { presentQuickFix } from "@/lib/ui/quickFixDisplay";
 import {
+  applyReportPresentation,
   briefSections,
   dimensionImpact,
   dimensionOverview,
@@ -148,6 +149,24 @@ describe("evaluation presentation quality cases", () => {
     expect(result.oneThing.recommendation).toMatch(/north star/i);
     expect(result.oneThing.impact).not.toMatch(/improve the coaching experience/i);
     expect(scoringNotes(result).join(" ")).not.toMatch(/\bd4\b/i);
+  });
+
+  it("2b. kick-off with D10 at zero prioritizes live booking over North Star cap", () => {
+    const rubric = getKickoffRubric();
+    const scores: Record<string, number | null> = {};
+    for (const d of rubric.dimensions) scores[d.id] = d.maxScore;
+    scores.d4 = 10;
+    scores.d10 = 0;
+    const result = applyReportPresentation(
+      hydrateEvaluationResult(
+        applyCapsAndBuildResult({
+          model: modelFor(rubric, scores, { firedCapIds: ["no-north-star"] }),
+          rubric,
+          modelName: "test",
+        }),
+      ),
+    );
+    expect(result.oneThing.recommendation).toMatch(/book the next call live/i);
   });
 
   it("3. strong coaching call keeps high scores and specific next action", () => {

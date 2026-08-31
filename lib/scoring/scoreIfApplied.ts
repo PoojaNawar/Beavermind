@@ -264,6 +264,20 @@ export function resolveLeverageTheme(result: EvaluationResult): LeverageTheme {
     return "largest-gap";
   }
 
+  if (result.callType === "kickoff") {
+    const missed = result.dimensions.filter(isMissed);
+    if (missed.length === 0) return "none";
+    const d10 = dimById(result, "d10");
+    if (d10 && isMissed(d10) && d10.score === 0) return "live-booking";
+    if (result.firedCaps.some((c) => c.id === "no-north-star")) {
+      return "north-star";
+    }
+    const d4 = dimById(result, "d4");
+    const largest = topMissedDimension(result);
+    if (d4 && isMissed(d4) && largest?.id === "d4") return "north-star";
+    return "largest-gap";
+  }
+
   const missed = result.dimensions.filter(isMissed);
   if (missed.length === 0) return "none";
   if (result.firedCaps.some((c) => c.id === "no-north-star")) return "north-star";
