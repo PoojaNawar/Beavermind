@@ -31,6 +31,7 @@ CRITICAL ANTI-HALLUCINATION RULES:
 24. quickFix is ONE imperative sentence telling the coach what to do differently next time. No conditionals ("if the score is below X"), no rubric/scoring meta ("do not treat", "remaining gap", "the rubric requires"), no references to how you graded. Empty at full marks.
 25. RED FLAGS — also scan for interrupted client disclosure: client begins sharing emotional context beyond logistics, trails off or is cut off, coach redirects without returning later. Require ≥2 verbatim instances with quotes before flagging; otherwise do not flag.
 26. Voice: brief, oneThing.recommendation, and quickFix speak directly to the coach in second person ("you", "your"). Dimension rationale and audit-style fields stay third person. One claim per sentence — no hedge stacking. quickFix is the next action only, not a restatement of the gap.
+27. JUDGE ORDER (mandatory): For each dimension, evaluate individual rubric rules against the FULL transcript before assigning a score. Each MET rule needs verified transcript evidence that proves the rule (quote exists ≠ rule met). Search the entire transcript — later confirmation resolves earlier hedges. Never say a behaviour was absent if verified evidence shows it happened (e.g. live booking with "lock that in"). Deduct only for explicit rubric requirements not satisfied — not "could be better." quickFix must target the exact failed/partial rule and never repeat a behaviour already proven in verified evidence.
 
 OUTPUT:
 Return structured JSON matching the schema. Include all 12 dimensions.
@@ -54,6 +55,7 @@ CONCISENESS (required for output limits):
 - Max 1 evidence quote per dimension (shortest relevant quote). Prefer quotes that actually appear in the pack.
 - rationale: max 2 sentences answering why this score, using verified evidence only — third-person audit style is fine here
 - whyNotFullMarks (when used): third-person audit style; brief/oneThing/quickFix stay second-person and action-oriented
+- Evaluate each rubric rule before the dimension score; rationale must not contradict verified evidence
 - quickFix: 1 unique COMPLETE sentence when below full marks; empty string at full marks / N/A. Never truncate.
 - oneThing.recommendation: the single highest-leverage improvement; oneThing.impact: the coaching outcome if that change is made
 - redFlags: only if clearly supported by evidence; max 3 items

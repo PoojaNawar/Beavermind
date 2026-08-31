@@ -324,6 +324,67 @@ export function DimensionAccordion({
                   </section>
                 ) : null}
 
+                {dim.criteriaResults && dim.criteriaResults.length > 0 ? (
+                  <section className="mt-6 border-t border-[var(--line)] pt-5">
+                    <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                      Rubric criteria
+                    </h4>
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      Rule → verified evidence → result. Quote existence is
+                      checked separately from whether the rule is satisfied.
+                    </p>
+                    <ul className="mt-3 space-y-3">
+                      {dim.criteriaResults.map((rule) => (
+                        <li
+                          key={rule.id}
+                          className="rounded-lg border border-[var(--line)] bg-[var(--card)]/40 px-3 py-3"
+                        >
+                          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                            <span
+                              className={`text-[11px] font-bold uppercase tracking-[0.12em] ${
+                                rule.status === "met"
+                                  ? "text-[var(--good)]"
+                                  : rule.status === "partial"
+                                    ? "text-[var(--warn)]"
+                                    : rule.status === "not_met"
+                                      ? "text-[var(--danger)]"
+                                      : "text-[var(--muted)]"
+                              }`}
+                            >
+                              {rule.status === "met"
+                                ? "Met"
+                                : rule.status === "partial"
+                                  ? "Partial"
+                                  : rule.status === "not_met"
+                                    ? "Not met"
+                                    : "N/A"}
+                            </span>
+                            <span className="text-sm font-medium text-[var(--ink)]">
+                              {rule.label}
+                            </span>
+                          </div>
+                          <p className="mt-1.5 text-sm leading-relaxed text-[var(--ink)]">
+                            {rule.note}
+                          </p>
+                          {rule.evidenceQuote ? (
+                            <blockquote className="mt-2 border-l-2 border-[var(--line)] pl-3 text-[13px] leading-relaxed text-[var(--muted)]">
+                              {rule.evidenceSpeaker
+                                ? `${rule.evidenceSpeaker}: `
+                                : ""}
+                              “{rule.evidenceQuote}”
+                            </blockquote>
+                          ) : rule.status !== "met" ? (
+                            <p className="mt-2 text-xs text-[var(--muted)]">
+                              No verified transcript line proves this rule —
+                              requirement treated as absent.
+                            </p>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
+
                 <section className="mt-6">
                   <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
                     Evidence

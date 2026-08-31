@@ -75,11 +75,7 @@ for (const d of report.dimensions) {
   if (d.disabled || d.notApplicable) continue;
   console.log(
     `${d.id} ${d.score}/${d.maxScore}`,
+    `${d.verifiedEvidenceCount} verified`,
     d.whyNotFullMarks ? `| gap: ${d.whyNotFullMarks.slice(0, 60)}...` : "| FULL",
   );
-  if (d.id === "d12") {
-    for (const ev of d.evidence) {
-      console.log(`  [${ev.speaker ?? "?"}] ${ev.quote.slice(0, 90)}...`);
-    }
-  }
 }

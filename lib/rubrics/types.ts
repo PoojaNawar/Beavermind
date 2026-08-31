@@ -116,6 +116,22 @@ export interface EvidenceQualitySummary {
   notDemonstratedDimensions: number;
 }
 
+/** Per-rubric-rule audit result attached during transcript hydration. */
+export type CriterionStatus = "met" | "partial" | "not_met" | "not_applicable";
+
+export interface CriterionResult {
+  id: string;
+  label: string;
+  status: CriterionStatus;
+  /** Verified excerpt proving the rule result (quote exists in transcript). */
+  evidenceQuote: string | null;
+  evidenceSpeaker: string | null;
+  /** Rubric requirement satisfied or the exact gap. */
+  note: string;
+  /** When true, required for Elite / full marks on this dimension. */
+  requiredForElite: boolean;
+}
+
 export interface DimensionResult {
   id: string;
   name: string;
@@ -140,6 +156,8 @@ export interface DimensionResult {
   meritScore?: number | null;
   /** Coach-facing two-step cap explanation when merit and final differ or cap checked. */
   capNote?: string | null;
+  /** Rule-level rubric audit (transcript hydration). */
+  criteriaResults?: CriterionResult[];
 }
 
 export interface RedFlag {

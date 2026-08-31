@@ -21,6 +21,7 @@ import {
 import { hasLiveNextCallBooking } from "@/lib/scoring/detectCaps";
 import { gradeFromScore, normalizeToHundred } from "@/lib/scoring/calculate";
 import { refreshDimensionQuickFixes } from "@/lib/scoring/quickFix";
+import { applyJudgeAudit } from "@/lib/scoring/judgeConsistency";
 import {
   capScoreWithoutVerifiedEvidence,
   rewriteUnverifiedRationale,
@@ -205,6 +206,7 @@ export function hydrateCompletedReport(
   next = mergeKickoffDisclosureRedFlags(next, transcript);
   next = filterKickoffTranscriptRedFlags(next, transcript);
   next = applyTranscriptAutoCaps(next, transcript);
+  next = applyJudgeAudit(next, transcript);
   return {
     ...next,
     dimensions: refreshDimensionQuickFixes(

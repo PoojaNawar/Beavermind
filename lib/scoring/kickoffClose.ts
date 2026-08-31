@@ -8,6 +8,7 @@
 
 import type { EvaluationResult, RedFlag } from "@/lib/rubrics/types";
 import { isBrokenEvidenceQuote, kickoffPostCallQuickFix } from "@/lib/scoring/dimensionAdjudication";
+import { backfillKickoffReportEvidence } from "@/lib/scoring/kickoffEvidenceBackfill";
 import { FULL_MARKS_QUICK_FIX } from "@/lib/scoring/quickFix";
 import {
   kickoffHasAgendaElite,
@@ -507,10 +508,8 @@ export function applyKickoffCloseCalibration(
     };
   }
 
-  return next;
+  return backfillKickoffReportEvidence(next, transcript);
 }
-
-/** Client starts emotional disclosure and trails off; requires 2+ instances. */
 export function kickoffHasUnexploredDisclosure(transcript: string): {
   fired: boolean;
   quotes: string[];

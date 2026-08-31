@@ -4,6 +4,7 @@
  */
 
 import type { CallType, DimensionResult, EvaluationResult } from "@/lib/rubrics/types";
+import { whyNotFullMarksFromCriteria } from "@/lib/scoring/criterionEvaluation";
 import { FULL_MARKS_QUICK_FIX } from "@/lib/scoring/quickFix";
 import { hasLeakedScoringMechanics } from "@/lib/scoring/textHygiene";
 
@@ -111,7 +112,7 @@ const COACHING_QUICK_FIX: Record<string, string> = {
   d12: "Keep session structure explicit from open to close.",
 };
 
-function rubricQuickFix(dimId: string, callType: CallType): string | null {
+export function rubricQuickFix(dimId: string, callType: CallType): string | null {
   const map = callType === "kickoff" ? KICKOFF_QUICK_FIX : COACHING_QUICK_FIX;
   return map[dimId]?.trim() || null;
 }
@@ -272,9 +273,14 @@ function quickFixContradictsEvidence(
 export function sanitizeDimensionEvidence(
   dim: DimensionResult,
 ): DimensionResult {
+  const seen = new Set<string>();
   const evidence = dim.evidence.filter((item) => {
     if (item.verificationStatus === "not_demonstrated") return true;
-    return !isBrokenEvidenceQuote(item.quote);
+    if (isBrokenEvidenceQuote(item.quote)) return false;
+    const key = item.quote.replace(/\s+/g, " ").trim().toLowerCase().slice(0, 120);
+    if (key.length >= 8 && seen.has(key)) return false;
+    if (key.length >= 8) seen.add(key);
+    return true;
   });
 
   if (evidence.length === dim.evidence.length) return dim;
@@ -315,8 +321,14 @@ export function finalizeDimensionAdjudication(
     };
   }
 
+  const whyFromCriteria = next.criteriaResults?.length
+    ? whyNotFullMarksFromCriteria(next.criteriaResults)
+    : null;
+
   const whyNotFullMarks = hideInternalIds(
-    computeWhyNotFullMarks(next, callType, result) ?? "",
+    whyFromCriteria ??
+      computeWhyNotFullMarks(next, callType, result) ??
+      "",
   ).trim();
 
   let quickFix = next.quickFix?.trim() ?? "";

@@ -88,6 +88,21 @@ describe("deterministic cap detection", () => {
     expect(hasLiveNextCallBooking(kickoff01)).toBe(true);
   });
 
+  it("recognizes coaching-01 verbal lock-in despite later calendar deferral language", () => {
+    const coaching01 = readFileSync(
+      path.join(process.cwd(), "transcripts/coaching-01.txt"),
+      "utf8",
+    );
+    expect(hasLiveNextCallBooking(coaching01)).toBe(true);
+    expect(detectDeterministicCapIds("coaching", coaching01)).not.toContain(
+      "next-call-not-booked",
+    );
+  });
+
+  it("does not treat kickoff-02 assistant deferral as live booking", () => {
+    expect(hasLiveNextCallBooking(kickoff02)).toBe(false);
+  });
+
   it("fires next-call-not-booked whenever live booking is absent", () => {
     const silentClose =
       "Great session today. Talk soon and keep posting in the community.";
