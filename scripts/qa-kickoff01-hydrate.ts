@@ -2,7 +2,11 @@ import { readFileSync, writeFileSync, mkdirSync } from "fs";
 import { getKickoffRubric } from "../lib/rubrics/kickoff";
 import { applyCapsAndBuildResult } from "../lib/scoring/calculate";
 import { hydrateCompletedReport } from "../lib/scoring/hydrateReport";
-import { applyReportPresentation, briefSections } from "../lib/ui/reportPresentation";
+import {
+  applyReportPresentation,
+  briefSections,
+  scoreHeadline,
+} from "../lib/ui/reportPresentation";
 import type { EvaluationResult } from "../lib/rubrics/types";
 
 const kickoff01 = readFileSync("transcripts/kickoff-01.txt", "utf8");
@@ -63,7 +67,7 @@ writeFileSync("qa-output/kickoff-01-hydrate.json", JSON.stringify(report, null, 
 
 console.log("Overall:", report.overallScore, report.grade);
 const brief = briefSections(report);
-console.log("\nSUMMARY:", brief.summary);
+console.log("\nSUMMARY:", scoreHeadline(report));
 console.log("WHAT WENT WELL:", brief.well);
 console.log("WHAT HELD BACK:", brief.held);
 console.log("ONE THING:", report.oneThing.recommendation);
