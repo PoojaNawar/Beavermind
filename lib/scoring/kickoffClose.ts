@@ -6,7 +6,7 @@
  * D7: channel + response time + community present → Support Clarity may keep Elite.
  */
 
-import type { EvaluationResult } from "@/lib/rubrics/types";
+import type { EvaluationResult, RedFlag } from "@/lib/rubrics/types";
 import { isBrokenEvidenceQuote, kickoffPostCallQuickFix } from "@/lib/scoring/dimensionAdjudication";
 import { FULL_MARKS_QUICK_FIX } from "@/lib/scoring/quickFix";
 import {
@@ -16,6 +16,7 @@ import {
   kickoffHasProgramElite,
   kickoffHasProgramClientConfirmation,
   kickoffHasRapportElite,
+  kickoffHasSupportClarityElite,
 } from "@/lib/scoring/eliteBar";
 
 export function kickoffHasStructuredRecap(transcript: string): boolean {
@@ -482,12 +483,134 @@ export function applyKickoffCloseCalibration(
     !d7.notApplicable &&
     d7.score !== null &&
     d7.score < 5 &&
-    kickoffHasSupportClarity(transcript)
+    kickoffHasSupportClarityElite(transcript)
   ) {
     next = recalculateAfterDimPatch(next, "d7", 5, "", transcript);
   }
 
+  const disclosure = kickoffHasUnexploredDisclosure(transcript);
+  if (
+    disclosure.fired &&
+    !next.redFlags.some((f) => /disclosure|opened up|redirect/i.test(f.title))
+  ) {
+    next = {
+      ...next,
+      redFlags: [
+        ...next.redFlags,
+        {
+          title: "Unexplored client disclosure",
+          explanation:
+            "The client began sharing something beyond the stated issue at least twice and the coach redirected both times without returning to it — a retention-risk signal the transcript directly supports.",
+          evidence: disclosure.quotes.join(" / "),
+        },
+      ],
+    };
+  }
+
   return next;
+}
+
+/** Client starts emotional disclosure and trails off; requires 2+ instances. */
+export function kickoffHasUnexploredDisclosure(transcript: string): {
+  fired: boolean;
+  quotes: string[];
+} {
+  const trailOffPatterns = [
+    /it'?s (?:kind of |honestly )?turned into (?:this )?whole\s*[—-]?\s*$/i,
+    /there'?s been a lot going on where I (?:just )?(?:kind of )?lose\s*[—-]?\s*$/i,
+    /(?:if I'?m being (?:real|honest))[,.]?\s*(?:it'?s|there'?s)/i,
+  ];
+  const quotes: string[] = [];
+  for (const line of transcript.split(/\n+/)) {
+    const trimmed = line.replace(/\r$/, "").trim();
+    const match = trimmed.match(/^\[[^\]]+\]:\s*(.+)$/);
+    const text = match ? match[1]!.trim() : trimmed;
+    if (trailOffPatterns.some((pattern) => pattern.test(text))) {
+      quotes.push(trimmed);
+    }
+  }
+  return { fired: quotes.length >= 2, quotes };
+}
+
+const DISCLOSURE_INTERRUPT_RE =
+  /(?:turned into this whole|if i'm being real|there's been a lot going on|kind of lose —|it's kind of turned into)/i;
+
+const COACH_RETURN_RE =
+  /tell me more|what do you mean|say more about|go on|what was that|what's going on|help me understand/i;
+
+function parseTranscriptLines(transcript: string): Array<{ speaker: string; text: string }> {
+  return transcript
+    .split(/\n+/)
+    .map((line) => line.replace(/\r$/, "").trim())
+    .map((line) => {
+      const match = line.match(/^\[([^\]]+)\]:\s*(.+)$/);
+      if (!match) return null;
+      return { speaker: match[1]!.trim(), text: match[2]!.trim() };
+    })
+    .filter((line): line is { speaker: string; text: string } => Boolean(line));
+}
+
+/** ≥2 client disclosure attempts cut off without the coach returning later. */
+export function detectInterruptedDisclosureRedFlags(
+  transcript: string,
+): RedFlag[] {
+  const lines = parseTranscriptLines(transcript);
+  const instances: Array<{ clientQuote: string; coachQuote: string }> = [];
+
+  for (let i = 0; i < lines.length - 1; i++) {
+    const client = lines[i]!;
+    if (/petrov|ivan|coach|owen|dana|whitlock/i.test(client.speaker)) continue;
+    if (!DISCLOSURE_INTERRUPT_RE.test(client.text)) continue;
+
+    for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+      const coach = lines[j]!;
+      if (!/petrov|ivan|coach|owen|dana|whitlock/i.test(coach.speaker)) continue;
+      if (COACH_RETURN_RE.test(coach.text)) break;
+      instances.push({
+        clientQuote: client.text,
+        coachQuote: coach.text,
+      });
+      break;
+    }
+  }
+
+  if (instances.length < 2) return [];
+
+  return [
+    {
+      title: "Interrupted client disclosure",
+      explanation:
+        "The client attempted to share emotional context beyond the physical issue at least twice, but the coach redirected without returning to it — a retention risk when rapport and deep why are thin.",
+      evidence: instances
+        .slice(0, 2)
+        .map((item) => `Client: "${item.clientQuote}" → Coach: "${item.coachQuote}"`)
+        .join(" | "),
+    },
+  ];
+}
+
+export function mergeKickoffDisclosureRedFlags(
+  result: EvaluationResult,
+  transcript: string | null | undefined,
+): EvaluationResult {
+  if (result.callType !== "kickoff" || !transcript?.trim()) return result;
+  const disclosure = kickoffHasUnexploredDisclosure(transcript);
+  if (!disclosure.fired) return result;
+  if (result.redFlags.some((f) => /disclosure|opened up|redirect/i.test(f.title))) {
+    return result;
+  }
+  return {
+    ...result,
+    redFlags: [
+      ...result.redFlags,
+      {
+        title: "Unexplored client disclosure",
+        explanation:
+          "The client began sharing something beyond the stated issue at least twice and the coach redirected both times without returning to it — a retention-risk signal the transcript directly supports.",
+        evidence: disclosure.quotes.join(" / "),
+      },
+    ],
+  };
 }
 
 /** Drop kick-off red flags that contradict transcript-grounded facts. */

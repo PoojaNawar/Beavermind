@@ -14,9 +14,23 @@ import {
   scoreExplanation,
   whyNotFullMarksCopy,
 } from "@/lib/ui/reportPresentation";
+import { capNoteForDimension } from "@/lib/scoring/meritCaps";
 import { presentQuickFix } from "@/lib/ui/quickFixDisplay";
 
 const QUOTE_PREVIEW_CHARS = 160;
+
+function statusLabelTone(status: string): string {
+  if (status === "CRITICAL") return "text-[var(--danger)]";
+  if (status === "FULL MARKS") return "text-[var(--good)]";
+  if (
+    status === "OPPORTUNITY" ||
+    status === "MINOR OPPORTUNITY" ||
+    status === "SIGNIFICANT GAP"
+  ) {
+    return "text-[var(--warn)]";
+  }
+  return "text-[var(--muted)]";
+}
 
 function truncateAtBoundary(text: string, maxChars: number): string {
   if (text.length <= maxChars) return text;
@@ -202,6 +216,7 @@ export function DimensionAccordion({
         const hasEvidence =
           verifiedItems.length + unverifiedItems.length + ndItems.length > 0;
         const assessment = na ? na.explanation : scoreExplanation(dim);
+        const capNote = na ? null : capNoteForDimension(dim);
         const whyNotFull = na ? null : whyNotFullMarksCopy(dim);
         const evidenceCountParts: string[] = [];
         if (verifiedItems.length > 0) {
@@ -236,13 +251,7 @@ export function DimensionAccordion({
                 </p>
                 {status ? (
                   <p
-                    className={`mt-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] ${
-                      status === "CRITICAL"
-                        ? "text-[var(--danger)]"
-                        : status === "FULL MARKS"
-                          ? "text-[var(--good)]"
-                          : "text-[var(--muted)]"
-                    }`}
+                    className={`mt-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] ${statusLabelTone(status)}`}
                   >
                     {status}
                   </p>
@@ -293,6 +302,17 @@ export function DimensionAccordion({
                   ) : null}
                 </section>
 
+                {capNote ? (
+                  <section className="mt-6 border-t border-[var(--line)] pt-5">
+                    <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                      Cap check
+                    </h4>
+                    <p className="mt-2 text-[15px] leading-relaxed text-[var(--ink)]">
+                      {capNote}
+                    </p>
+                  </section>
+                ) : null}
+
                 {whyNotFull ? (
                   <section className="mt-6 border-t border-[var(--line)] pt-5">
                     <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
@@ -318,25 +338,57 @@ export function DimensionAccordion({
                         : "No transcript evidence attached."}
                     </p>
                   ) : (
-                    <ul className="mt-3 space-y-4">
-                      {verifiedItems.map((ev, i) => (
-                        <EvidenceQuote key={`v-${i}`} ev={ev} kind="verified" />
-                      ))}
-                      {unverifiedItems.map((ev, i) => (
-                        <EvidenceQuote
-                          key={`u-${i}`}
-                          ev={ev}
-                          kind="unverified"
-                        />
-                      ))}
-                      {ndItems.map((ev, i) => (
-                        <EvidenceQuote
-                          key={`nd-${i}`}
-                          ev={ev}
-                          kind="not_demonstrated"
-                        />
-                      ))}
-                    </ul>
+                    <>
+                      {evidenceCountParts.length > 0 ? (
+                        <p className="mt-2 text-sm text-[var(--muted)]">
+                          {evidenceCountParts.join(" · ")} — only verified
+                          quotes support the score.
+                        </p>
+                      ) : null}
+                      {verifiedItems.length > 0 ? (
+                        <ul className="mt-3 space-y-4">
+                          {verifiedItems.map((ev, i) => (
+                            <EvidenceQuote
+                              key={`v-${i}`}
+                              ev={ev}
+                              kind="verified"
+                            />
+                          ))}
+                        </ul>
+                      ) : null}
+                      {unverifiedItems.length > 0 || ndItems.length > 0 ? (
+                        <div
+                          className={`${
+                            verifiedItems.length > 0
+                              ? "mt-4 border-t border-[var(--line)] pt-4"
+                              : "mt-3"
+                          } rounded-lg bg-[var(--card)]/60 px-3 py-3 sm:px-4`}
+                        >
+                          <p className="mb-3 text-xs leading-relaxed text-[var(--muted)]">
+                            Unverified means our system proposed this as
+                            supporting evidence but could not confirm the exact
+                            wording in the transcript — it is a check on the AI,
+                            not a mark against you.
+                          </p>
+                          <ul className="space-y-4">
+                            {unverifiedItems.map((ev, i) => (
+                              <EvidenceQuote
+                                key={`u-${i}`}
+                                ev={ev}
+                                kind="unverified"
+                              />
+                            ))}
+                            {ndItems.map((ev, i) => (
+                              <EvidenceQuote
+                                key={`nd-${i}`}
+                                ev={ev}
+                                kind="not_demonstrated"
+                              />
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </>
                   )}
                 </section>
 

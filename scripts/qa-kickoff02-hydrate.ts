@@ -49,7 +49,14 @@ for (const d of report.dimensions) {
   if (d.whyNotFullMarks) {
     console.log(`    Why not full: ${d.whyNotFullMarks}`);
   }
+  if (d.capNote) {
+    console.log(`    Cap: ${d.capNote}`);
+  }
   if (d.id === "d12" && d.quickFix) {
     console.log(`    Quick fix: ${d.quickFix}`);
   }
+}
+console.log("\nRed flags:", report.redFlags.length);
+for (const flag of report.redFlags) {
+  console.log(`  - ${flag.title}: ${flag.explanation.slice(0, 80)}...`);
 }

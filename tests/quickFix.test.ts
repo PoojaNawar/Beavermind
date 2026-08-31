@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  isUnusableQuickFix,
   resolveQuickFix,
   refreshDimensionQuickFixes,
 } from "@/lib/scoring/quickFix";
+import { hasLeakedScoringMechanics } from "@/lib/scoring/textHygiene";
 import { applyCapsAndBuildResult } from "@/lib/scoring/calculate";
 import { getKickoffRubric } from "@/lib/rubrics/kickoff";
 import type { ModelEvaluationOutput } from "@/lib/validation/schemas";
@@ -27,6 +29,25 @@ describe("resolveQuickFix", () => {
   const rubric = getKickoffRubric();
   const rapport = rubric.dimensions.find((d) => d.id === "d2")!;
   const prep = rubric.dimensions.find((d) => d.id === "d1")!;
+  const close = rubric.dimensions.find((d) => d.id === "d11")!;
+
+  it("rejects leaked D11 meta-commentary from the Renata report", () => {
+    const leaked =
+      "The recap is already in the transcript. Do not treat this as a missing recap. If the score is below 5, the remaining gap is confidence or emotional reinforcement — not listing the agenda again.";
+    expect(hasLeakedScoringMechanics(leaked)).toBe(true);
+    expect(isUnusableQuickFix(leaked, close)).toBe(true);
+    const fixed = resolveQuickFix({
+      quickFix: leaked,
+      score: 3,
+      maxScore: 5,
+      disabled: false,
+      notApplicable: false,
+      dimension: close,
+    });
+    expect(fixed).not.toMatch(/do not treat/i);
+    expect(fixed).not.toMatch(/if the score/i);
+    expect(fixed).toMatch(/recap|confidence|close/i);
+  });
 
   it("keeps a model-written quick fix", () => {
     expect(

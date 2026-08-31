@@ -5,6 +5,7 @@
 
 import type { CallType, DimensionResult, EvaluationResult } from "@/lib/rubrics/types";
 import { FULL_MARKS_QUICK_FIX } from "@/lib/scoring/quickFix";
+import { hasLeakedScoringMechanics } from "@/lib/scoring/textHygiene";
 
 const INTERNAL_DIM_ID = /\b[dD](1[0-2]|[1-9])\b/g;
 
@@ -55,20 +56,13 @@ export function performanceLevel(
   const ratio = dim.score / dim.maxScore;
 
   if (dim.score === 0) {
-    const forced =
-      result?.firedCaps.some(
-        (c) =>
-          (c.id === "next-call-not-booked" && dim.id === "d10") ||
-          (c.id === "struggle-ignored" && dim.id === "d8"),
-      ) ?? false;
-    if (forced) return "critical_miss";
+    return "critical_miss";
   }
 
   if (gap <= 1 && ratio >= 0.85) return "minor_opportunity";
   if (gap <= 2 && ratio >= 0.75) return "small_opportunity";
   if (gap <= 3 || ratio >= 0.6) return "meaningful_opportunity";
-  if (ratio >= 0.4) return "significant_gap";
-  return "critical_miss";
+  return "significant_gap";
 }
 
 export function performanceLevelLabel(level: PerformanceLevel): string | null {
@@ -225,23 +219,28 @@ export function heldBackPhrase(
   callType: CallType,
   result?: EvaluationResult,
 ): string {
-  const why = dim.whyNotFullMarks ?? computeWhyNotFullMarks(dim, callType, result);
-  const level = performanceLevel(dim);
-  const area = dim.name.replace(/\s*&\s*/g, " and ").toLowerCase();
+  const why =
+    dim.whyNotFullMarks ?? computeWhyNotFullMarks(dim, callType, result);
+  const area = dim.name.replace(/\s*&\s*/g, " and ");
+
+  if (why) {
+    return `${area}: ${why}`;
+  }
+
+  const level = performanceLevel(dim, result);
 
   switch (level) {
     case "minor_opportunity":
-      return `The only remaining opportunity is a minor refinement in ${area}: ${why ?? "one elite rubric signal was not fully demonstrated."}`;
+      return `${area}: one elite rubric signal was not fully demonstrated.`;
     case "small_opportunity":
-      return `A small opportunity remains in ${area}: ${why ?? "verified evidence did not fully satisfy the elite bar."}`;
     case "meaningful_opportunity":
-      return `A meaningful opportunity remains in ${area}: ${why ?? "verified evidence did not fully satisfy the elite bar."}`;
+      return `${area}: verified evidence did not fully satisfy the elite bar.`;
     case "significant_gap":
-      return `A significant gap in ${area}: ${why ?? "core rubric criteria were not fully demonstrated."}`;
+      return `${area}: core rubric criteria were not fully demonstrated.`;
     case "critical_miss":
-      return `Critical miss in ${area}: ${why ?? "a required rubric behaviour was not demonstrated in the transcript."}`;
+      return `${area}: a required rubric behaviour was not demonstrated in the transcript.`;
     default:
-      return why ?? `Gap in ${area}.`;
+      return `${area}: the elite bar was not fully met in verified transcript evidence.`;
   }
 }
 
@@ -326,7 +325,8 @@ export function finalizeDimensionAdjudication(
   if (
     !quickFix ||
     quickFix === FULL_MARKS_QUICK_FIX ||
-    quickFixContradictsEvidence(next, quickFix)
+    quickFixContradictsEvidence(next, quickFix) ||
+    hasLeakedScoringMechanics(quickFix)
   ) {
     quickFix = rubricFix ?? quickFix;
   }

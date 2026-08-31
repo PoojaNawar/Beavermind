@@ -5,6 +5,7 @@ import { applyCapsAndBuildResult } from "@/lib/scoring/calculate";
 import { kickoffHasPrepElite, nextEliteScore } from "@/lib/scoring/eliteBar";
 import { applyKickoffCloseCalibration } from "@/lib/scoring/kickoffClose";
 import { applyTranscriptAutoCaps } from "@/lib/scoring/transcriptCaps";
+import { applyKickoffMeritHydration } from "@/lib/scoring/hydrateReport";
 import { hydrateCompletedReport } from "@/lib/scoring/hydrateReport";
 import { applyReportPresentation } from "@/lib/ui/reportPresentation";
 import { kickoffPostCallQuickFix } from "@/lib/scoring/dimensionAdjudication";
@@ -57,9 +58,12 @@ describe("transcriptCaps", () => {
       },
     };
 
-    const capped = applyTranscriptAutoCaps(base, kickoff02);
+    const capped = applyKickoffMeritHydration(
+      applyTranscriptAutoCaps(base, kickoff02),
+      kickoff02,
+    );
     expect(capped.firedCaps.some((c) => c.id === "no-north-star")).toBe(true);
-    expect(capped.dimensions.find((d) => d.id === "d4")?.score).toBe(10);
+    expect(capped.dimensions.find((d) => d.id === "d4")?.score).toBe(5);
   });
 });
 
@@ -68,8 +72,9 @@ describe("kickoff-02 system calibration", () => {
     expect(kickoffHasPrepElite(kickoff02)).toBe(true);
   });
 
-  it("caps kickoff D10 when booking is deferred to assistant", () => {
-    expect(nextEliteScore("kickoff", "d10", 3, kickoff02)).toBe(0);
+  it("scores kickoff D10 in Mid band when booking is deferred to assistant", () => {
+    expect(nextEliteScore("kickoff", "d10", 3, kickoff02)).toBe(3);
+    expect(nextEliteScore("kickoff", "d10", 5, kickoff02)).toBe(3.5);
   });
 
   it("hydrates D12 with verified program-build commitment evidence", () => {
@@ -171,6 +176,8 @@ describe("kickoff-02 system calibration", () => {
     expect(report.firedCaps.some((c) => c.id === "no-north-star")).toBe(true);
     expect(report.dimensions.find((d) => d.id === "d1")?.score).toBe(10);
     const d4 = report.dimensions.find((d) => d.id === "d4")!;
+    expect(d4.score).toBe(5);
+    expect(d4.meritScore).toBe(5);
     expect(d4.whyNotFullMarks).toMatch(/North Star/i);
   });
 

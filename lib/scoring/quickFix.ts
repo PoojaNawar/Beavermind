@@ -4,6 +4,7 @@ import type {
   RubricDimension,
 } from "@/lib/rubrics/types";
 import { sanitizeQuickFixTypography } from "@/lib/ui/quickFixTypography";
+import { hasLeakedScoringMechanics } from "@/lib/scoring/textHygiene";
 
 const GENERIC_QUICK_FIX =
   /^(improve communication|build( more)? rapport|be more empathetic|do better|try harder|be a better listener|improve your coaching)\.?$/i;
@@ -50,6 +51,10 @@ export function fallbackQuickFix(dimension: RubricDimension): string {
   return `Do this to reach full marks on ${dimension.name}: ${target}`;
 }
 
+export function isLeakedReasoningQuickFix(text: string): boolean {
+  return hasLeakedScoringMechanics(text);
+}
+
 export function isUnusableQuickFix(
   text: string,
   dimension: RubricDimension,
@@ -59,6 +64,7 @@ export function isUnusableQuickFix(
 
   const cleaned = sanitizeQuickFixTypography(trimmed);
   if (isIncompleteQuickFix(cleaned)) return true;
+  if (hasLeakedScoringMechanics(cleaned)) return true;
   const normalized = cleaned.toLowerCase().replace(/\s+/g, " ");
   if (GENERIC_QUICK_FIX.test(normalized)) {
     return true;

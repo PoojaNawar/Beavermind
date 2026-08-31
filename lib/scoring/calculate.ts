@@ -18,6 +18,7 @@ import {
   filterKickoffTranscriptRedFlags,
   kickoffHasEliteClose,
   kickoffHasStructuredRecap,
+  mergeKickoffDisclosureRedFlags,
 } from "@/lib/scoring/kickoffClose";
 import {
   floorEliteScore,
@@ -29,6 +30,11 @@ import { hasLiveNextCallBooking } from "@/lib/scoring/detectCaps";
 import { capScoreWithoutVerifiedEvidence } from "@/lib/transcripts/evidencePolicy";
 import { computeScoreIfApplied } from "@/lib/scoring/scoreIfApplied";
 import { applyAutoCapsToDimensions } from "@/lib/scoring/transcriptCaps";
+import {
+  applyKickoffMeritScoring,
+  attachKickoffCapNotes,
+  enrichFiredCapEffects,
+} from "@/lib/scoring/meritCaps";
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
@@ -134,6 +140,10 @@ export function applyCapsAndBuildResult(args: {
     }
   }
 
+  if (rubric.id === "kickoff" && transcript) {
+    applyKickoffMeritScoring(working as DimensionResult[], transcript);
+  }
+
   // Apply dimension-level caps / forced scores from model-reported + rule IDs
   const firedIds = new Set(model.firedCapIds);
   applyAutoCapsToDimensions(
@@ -142,6 +152,10 @@ export function applyCapsAndBuildResult(args: {
     firedIds,
     firedCaps,
   );
+
+  if (rubric.id === "kickoff" && transcript) {
+    attachKickoffCapNotes(working as DimensionResult[], rubric, firedIds);
+  }
 
   // Kickoff D11: cap/restore from the transcript, not from rationale wording.
   // D7/D12 floors are applied after the result object is built.
@@ -224,6 +238,8 @@ export function applyCapsAndBuildResult(args: {
         rationale: d.rationale,
         evidence,
         quickFix: d.quickFix,
+        meritScore: (d as DimensionResult).meritScore ?? null,
+        capNote: (d as DimensionResult).capNote ?? null,
         ...quality,
       };
     }),
@@ -258,7 +274,7 @@ export function applyCapsAndBuildResult(args: {
     brief: model.brief,
     redFlags: model.redFlags,
     dimensions,
-    firedCaps,
+    firedCaps: enrichFiredCapEffects(firedCaps, dimensions),
     modelName,
     evidenceQuality: summarizeReportEvidence(dimensions),
   };
@@ -276,6 +292,7 @@ export function applyCapsAndBuildResult(args: {
 
   if (transcript && rubric.id === "kickoff") {
     finalized = applyKickoffCloseCalibration(finalized, transcript);
+    finalized = mergeKickoffDisclosureRedFlags(finalized, transcript);
     finalized = filterKickoffTranscriptRedFlags(finalized, transcript);
     const again = computeScoreIfApplied(finalized);
     finalized = {

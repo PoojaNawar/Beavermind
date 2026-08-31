@@ -266,6 +266,7 @@ function humanizeCap(cap: FiredCap, result: EvaluationResult): string | null {
     }
     case "no-north-star": {
       const d4 = dimById(result, "d4");
+      if (d4?.capNote) return d4.capNote;
       return `${d4?.name ?? "Goal Alignment"} was subject to the rubric's scoring constraint because a North Star was not constructed.`;
     }
     case "no-accountability-commitment": {
@@ -459,22 +460,22 @@ function heldDetail(dim: DimensionResult, callType: string, result?: EvaluationR
     return heldBackPhrase(dim, callType as EvaluationResult["callType"], result);
   }
   if (callType === "kickoff" && dim.id === "d9") {
-    return "The main gap was next-step clarity: the coach explained the diagnostic workflow and deadline, but did not fully confirm the client's understanding of what to do next.";
+    return "Next steps: you explained the diagnostic workflow and deadline, but did not fully confirm the client's understanding of what to do next.";
   }
   if (callType === "kickoff" && dim.id === "d4") {
-    return "The main gap was goal alignment: the emotional why was not fully stated back, confirmed, and locked to a concrete 30-day marker.";
+    return "Goal alignment: the emotional why was not fully stated back, confirmed, and locked to a concrete 30-day marker.";
   }
   if (callType === "kickoff" && dim.id === "d2") {
-    return "The main gap was rapport depth: connection stayed surface-level and did not fully return focus to the client's situation.";
+    return "Rapport: connection stayed surface-level and did not fully return focus to the client's situation.";
   }
   if (callType === "kickoff" && dim.id === "d1") {
-    return "The main gap was prep visibility: intake details were not surfaced early enough to prove the coach arrived prepared.";
+    return "Preparation: intake details were not surfaced early enough to show you arrived prepared.";
   }
   if (callType === "kickoff" && dim.id === "d3") {
-    return "The main gap was agenda framing: time, sequenced phases, and explicit client consent were not all secured upfront.";
+    return "Agenda framing: time, sequenced phases, and explicit client consent were not all secured upfront.";
   }
   if (callType === "kickoff" && dim.id === "d6") {
-    return "The main gap was journey and expectation setting: valleys and emotional friction were not prepared clearly enough.";
+    return "Journey and expectations: valleys and emotional friction were not prepared clearly enough.";
   }
   if (callType === "kickoff" && dim.id === "d11") {
     return "The main gap was the close: the recap did not fully reconnect to the goal and next concrete step.";
@@ -532,7 +533,7 @@ function nextActionCopy(dim: DimensionResult, callType: string): string {
     return "Leave with one client-owned deliverable, a deadline, spoken confirmation, and a clear miss consequence.";
   }
   if (callType === "coaching" && dim.id === "d11") {
-    return "Restate what the coach owes and what the client owes, with timing and channel, before ending the call.";
+    return "Restate what you owe and what the client owes, with timing and channel, before ending the call.";
   }
   if (callType === "coaching" && dim.id === "d5") {
     return "Frame the adjustment as strategy that protects the long game, and check that the client understands why it is the right move now.";
@@ -589,7 +590,7 @@ function buildWentWell(
       full.slice(0, 3).map((d) => strengthLabel(d, callType)),
     )}.`;
   }
-  return `The coach ${joinHuman(actions)}.`;
+  return `You ${joinHuman(actions)}.`;
 }
 
 function buildHeldBack(

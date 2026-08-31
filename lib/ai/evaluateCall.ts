@@ -14,6 +14,8 @@ import { resolveFiredCapIds } from "@/lib/scoring/detectCaps";
 import { chunkTranscript, needsChunking } from "@/lib/transcripts/handling";
 import { verifyEvidenceItems } from "@/lib/transcripts/evidenceQuality";
 import { reconcileModelOutputAfterVerification } from "@/lib/transcripts/evidencePolicy";
+import { validateModelScoring } from "@/lib/scoring/validateModelScoring";
+import { hasLeakedScoringMechanics } from "@/lib/scoring/textHygiene";
 import {
   aggregateEvidencePacks,
   chunkEvidencePackSchema,
@@ -110,11 +112,30 @@ async function announce(ctx: RunContext, message: string): Promise<void> {
   await ctx.onProgress?.(message);
 }
 
+function sanitizeLeakedQuickFixes(
+  model: ModelEvaluationOutput,
+  rubric: ReturnType<typeof getRubric>,
+): ModelEvaluationOutput {
+  return {
+    ...model,
+    dimensions: model.dimensions.map((dim) => {
+      if (!dim.quickFix.trim() || !hasLeakedScoringMechanics(dim.quickFix)) {
+        return dim;
+      }
+      const def = rubric.dimensions.find((d) => d.id === dim.id);
+      return {
+        ...dim,
+        quickFix: def?.quickFixAction?.trim() || "",
+      };
+    }),
+  };
+}
+
 function prepareVerifiedModel(args: {
   model: ModelEvaluationOutput;
   rubric: ReturnType<typeof getRubric>;
   transcript: string;
-}): ModelEvaluationOutput {
+}): { model: ModelEvaluationOutput; validationErrors: string[] } {
   const validated = validateModelOutput(args.model, args.rubric);
 
   const withVerifiedEvidence: ModelEvaluationOutput = {
@@ -134,7 +155,14 @@ function prepareVerifiedModel(args: {
     modelFiredIds: reconciled.firedCapIds,
   });
 
-  return reconciled;
+  const sanitized = sanitizeLeakedQuickFixes(reconciled, args.rubric);
+  const validationErrors = validateModelScoring({
+    model: sanitized,
+    rubric: args.rubric,
+    transcript: args.transcript,
+  });
+
+  return { model: sanitized, validationErrors };
 }
 
 async function runStructuredEvaluation(args: {
@@ -375,6 +403,7 @@ export async function evaluateCall(args: {
     modelOutput: ModelEvaluationOutput,
     modelNameUsed: string,
     chunkCount: number,
+    attempt = 1,
   ): Promise<EvaluateCallOutcome> => {
     await emit(ctx, "validating");
     await announce(ctx, "Checking quotes against the original transcript");
@@ -383,10 +412,23 @@ export async function evaluateCall(args: {
       rubric: getRubric(args.callType),
       transcript,
     });
+    if (verified.validationErrors.length > 0 && attempt < 2 && !chunked) {
+      await announce(
+        ctx,
+        "Rechecking dimension bands against the rubric",
+      );
+      const retry = await runStructuredEvaluation({
+        callType: args.callType,
+        transcript,
+        mode: "single",
+        ctx,
+      });
+      return finish(retry.output, retry.modelName, chunkCount, attempt + 1);
+    }
     await emit(ctx, "scoring");
     await announce(ctx, "Calculating the overall score");
     const result = applyCapsAndBuildResult({
-      model: verified,
+      model: verified.model,
       rubric: getRubric(args.callType),
       modelName: modelNameUsed,
       transcript,

@@ -136,6 +136,10 @@ export interface DimensionResult {
   evidenceStrength: EvidenceStrength;
   /** Rubric-grounded reason when score < maxScore; null at full marks. */
   whyNotFullMarks?: string | null;
+  /** Content score before a dimension auto-cap clamp (kickoff merit-first). */
+  meritScore?: number | null;
+  /** Coach-facing two-step cap explanation when merit and final differ or cap checked. */
+  capNote?: string | null;
 }
 
 export interface RedFlag {

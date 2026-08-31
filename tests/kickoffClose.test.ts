@@ -151,14 +151,14 @@ describe("kickoff close calibration", () => {
     expect(result.dimensions.find((d) => d.id === "d12")?.score).toBe(5);
   });
 
-  it("restores D7 when support channel, response time, and community are present", () => {
+  it("caps D7 at Mid on kickoff-02 when accountability framing is missing", () => {
     const result = applyCapsAndBuildResult({
-      model: stub({ ...ELITE_SCORES, d7: 3 }),
+      model: stub({ ...ELITE_SCORES, d7: 5 }),
       rubric: getKickoffRubric(),
       modelName: "test",
       transcript: kickoff02,
     });
-    expect(result.dimensions.find((d) => d.id === "d7")?.score).toBe(5);
+    expect(result.dimensions.find((d) => d.id === "d7")?.score).toBe(3);
   });
 
   it("drops contradicted recap and soft North Star red flags on hydrate", () => {

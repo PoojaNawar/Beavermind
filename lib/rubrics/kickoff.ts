@@ -19,6 +19,8 @@ export const kickoffRubric: Rubric = {
     "D9: the client must understand what, how, where, and by when, and the coach must verify understanding. Equivalent confirmation counts; a scripted repeat-back is not required. A later closing recap confirmation satisfies verification even if the client hedged earlier.",
     "Evaluate dimensions as a sequence across the full transcript — later evidence can resolve earlier ambiguity.",
     "D7 and D12 score what is communicated in-call, not post-call delivery.",
+    "AUTO-CAP TWO-STEP: score each dimension on content first, then apply caps only if the content score exceeds the cap.",
+    "D10 Fail requires zero mention of the next call; assistant/link deferral is Mid (2.5–3.5), not Fail.",
   ],
   gradeBands: [
     { band: "Elite", min: 90, max: 100, description: "Deep + clear + client confirms." },

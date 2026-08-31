@@ -12,12 +12,14 @@ import {
   kickoffAgendaIsUpfront,
   kickoffCloseFeelsRushed,
   kickoffHasDeepWhyElite,
+  kickoffHasDeepWhyStrongFloor,
   kickoffHasJourneyElite,
   kickoffHasNextStepsConfirmation,
   kickoffHasNextStepsElite,
   kickoffHasPrepElite,
   kickoffHasProgramElite,
   kickoffHasRapportElite,
+  kickoffHasSupportClarityElite,
   kickoffPersonalShareAfterAgenda,
   nextEliteScore,
 } from "@/lib/scoring/eliteBar";
@@ -29,6 +31,10 @@ import type { DimensionResult } from "@/lib/rubrics/types";
 
 const kickoff01 = readFileSync(
   path.join(process.cwd(), "transcripts/kickoff-01.txt"),
+  "utf8",
+);
+const kickoff02 = readFileSync(
+  path.join(process.cwd(), "transcripts/kickoff-02.txt"),
   "utf8",
 );
 const coaching01 = readFileSync(
@@ -357,5 +363,22 @@ describe("kickoff and coaching quick fixes", () => {
     );
     expect(view?.title).toBe("Deepen the personal connection");
     expect(view?.body).toMatch(/mirrors the client's situation/i);
+  });
+});
+
+describe("kickoff-02 elite floors", () => {
+  it("floors D4 Strong to Mid when no why-probe after the goal ask", () => {
+    expect(kickoffHasDeepWhyStrongFloor(kickoff02)).toBe(false);
+    expect(nextEliteScore("kickoff", "d4", 10, kickoff02)).toBe(5);
+  });
+
+  it("caps D7 at Mid when accountability framing is missing", () => {
+    expect(kickoffHasSupportClarityElite(kickoff02)).toBe(false);
+    expect(nextEliteScore("kickoff", "d7", 5, kickoff02)).toBe(3);
+  });
+
+  it("leaves kickoff D10 Mid scores alone and caps false Elite booking", () => {
+    expect(nextEliteScore("kickoff", "d10", 3, kickoff02)).toBe(3);
+    expect(nextEliteScore("kickoff", "d10", 5, kickoff02)).toBe(3.5);
   });
 });

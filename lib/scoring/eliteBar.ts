@@ -312,6 +312,45 @@ export function kickoffHasDeepWhyElite(transcript: string): boolean {
   return statedBack && confirmed && day30;
 }
 
+/** Strong (10) requires at least one follow-up "why" after the first goal answer. */
+export function kickoffHasDeepWhyStrongFloor(transcript: string): boolean {
+  return /why is that important|how would that (?:impact|affect)|what would happen if|what does that mean for you|why does that matter/i.test(
+    transcript,
+  );
+}
+
+const KICKOFF_ACCOUNTABILITY_RE =
+  /push you|stay in the background|hold you accountable|do you want me to (?:push|stay)|how do you like to be coached/i;
+
+export function kickoffHasSupportAccountabilityFraming(
+  transcript: string,
+): boolean {
+  return KICKOFF_ACCOUNTABILITY_RE.test(transcript);
+}
+
+function kickoffHasSupportClarityBasics(transcript: string): boolean {
+  const channel =
+    /messag(?:e|ing) tab|in the app|day to day|email support|drop it in/i.test(
+      transcript,
+    );
+  const response =
+    /same day|next morning|check messages daily|get back to you|response times?/i.test(
+      transcript,
+    );
+  const community =
+    /community (?:tab|space|platform)|group space|everyone in the program/i.test(
+      transcript,
+    );
+  return channel && response && community;
+}
+
+export function kickoffHasSupportClarityElite(transcript: string): boolean {
+  return (
+    kickoffHasSupportClarityBasics(transcript) &&
+    kickoffHasSupportAccountabilityFraming(transcript)
+  );
+}
+
 export function coachingHasCheckInElite(transcript: string): boolean {
   const body =
     /body.{0,40}feel|how(?:'s| is) (?:your body|the (?:knee|shoulder|back|hip))|feeling today|right now, not the/i.test(
@@ -586,6 +625,14 @@ export function nextEliteScore(
     if (dimensionId === "d4" && score >= 15 && !kickoffHasDeepWhyElite(transcript)) {
       return 10;
     }
+    if (
+      dimensionId === "d4" &&
+      score >= 10 &&
+      score < 15 &&
+      !kickoffHasDeepWhyStrongFloor(transcript)
+    ) {
+      return 5;
+    }
     if (dimensionId === "d5" && score >= 9 && !kickoffHasProgramElite(transcript)) {
       return 8;
     }
@@ -611,11 +658,18 @@ export function nextEliteScore(
       return 7;
     }
     if (
+      dimensionId === "d7" &&
+      score >= 5 &&
+      !kickoffHasSupportClarityElite(transcript)
+    ) {
+      return 3;
+    }
+    if (
       dimensionId === "d10" &&
-      score > 0 &&
+      score >= 4.5 &&
       !hasLiveNextCallBooking(transcript)
     ) {
-      return 0;
+      return 3.5;
     }
   }
 

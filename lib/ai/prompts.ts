@@ -26,6 +26,11 @@ CRITICAL ANTI-HALLUCINATION RULES:
 19. If a dimension does not apply, mark notApplicable or disabled. Do not penalize. Do not describe it as the coach turning something off.
 20. Red flags are for critical missed requirements, material risks, or rubric-defined red-flag behaviours only — never ordinary improvement opportunities. Every red flag needs verified transcript evidence. Never flag "no live booking until the end" when the next call was booked live before hang-up. Never flag "no structured recap" when the coach gave an explicit recap of next steps. Missing North Star is a scoring cap on D4 — do not raise it as a red flag unless there is a retention/safety risk. Prefer "No red flags" over soft preferences.
 21. Evaluate each dimension as a SEQUENCE across the full transcript, not isolated early quotes. Later evidence can confirm understanding, resolve ambiguity, satisfy a rubric criterion, or show follow-through. Before claiming understanding was not verified, the coach did not confirm, or the client did not agree, search the remainder of the transcript — only make the negative claim if the complete relevant sequence supports it. Before any partial score, name the exact rubric criterion still unsatisfied; if none, award full credit. Do not deduct for coaching-style preference or generic "could be more detailed." Partial-score rationale must state WHY NOT FULL MARKS with a specific rubric-grounded gap. quickFix must address that gap — never recommend a behaviour already demonstrated in verified evidence.
+22. AUTO-CAP TWO-STEP (mandatory): For every dimension affected by a global auto-cap, first score content quality as if no cap existed — write the band name and numeric score. Only then check AUTO-CAPS. If a cap applies and step-1 exceeds the cap, reduce to the cap and say so. If step-1 is already below the cap, the cap changes nothing — say the cap "did not affect the score." Never treat a cap maximum as the default score (e.g. no North Star cap at 10/15 is NOT automatic 10/15 when the call is Mid at 5/15).
+23. BAND TABLE ORDER: Before assigning a score, quote the exact band description you believe applies, then check the two adjacent bands for a closer match. For Fail bands, confirm the literal Fail condition is true (e.g. D10 Fail = "no mention of the next call at all"). If the behaviour was mentioned in any form, Fail is unavailable — use Mid or higher.
+24. quickFix is ONE imperative sentence telling the coach what to do differently next time. No conditionals ("if the score is below X"), no rubric/scoring meta ("do not treat", "remaining gap", "the rubric requires"), no references to how you graded. Empty at full marks.
+25. RED FLAGS — also scan for interrupted client disclosure: client begins sharing emotional context beyond logistics, trails off or is cut off, coach redirects without returning later. Require ≥2 verbatim instances with quotes before flagging; otherwise do not flag.
+26. Voice: brief, oneThing.recommendation, and quickFix speak directly to the coach in second person ("you", "your"). Dimension rationale and audit-style fields stay third person. One claim per sentence — no hedge stacking. quickFix is the next action only, not a restatement of the gap.
 
 OUTPUT:
 Return structured JSON matching the schema. Include all 12 dimensions.
@@ -45,9 +50,10 @@ Do not invent evidence. If the pack shows a behaviour was not demonstrated, scor
 When citing evidence in dimension results, reuse verbatim quotes from the evidence pack.
 
 CONCISENESS (required for output limits):
-- brief: max 3 sentences covering what went well, what held the score back, and what to do next
+- brief: max 3 sentences covering what went well, what held the score back, and what to do next — written directly to the coach in second person ("you established...", never "the coach established...")
 - Max 1 evidence quote per dimension (shortest relevant quote). Prefer quotes that actually appear in the pack.
-- rationale: max 2 sentences answering why this score, using verified evidence only
+- rationale: max 2 sentences answering why this score, using verified evidence only — third-person audit style is fine here
+- whyNotFullMarks (when used): third-person audit style; brief/oneThing/quickFix stay second-person and action-oriented
 - quickFix: 1 unique COMPLETE sentence when below full marks; empty string at full marks / N/A. Never truncate.
 - oneThing.recommendation: the single highest-leverage improvement; oneThing.impact: the coaching outcome if that change is made
 - redFlags: only if clearly supported by evidence; max 3 items

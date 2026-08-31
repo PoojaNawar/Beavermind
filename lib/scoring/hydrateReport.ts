@@ -3,6 +3,7 @@ import type { DimensionResult, EvaluationResult } from "@/lib/rubrics/types";
 import {
   applyKickoffCloseCalibration,
   filterKickoffTranscriptRedFlags,
+  mergeKickoffDisclosureRedFlags,
 } from "@/lib/scoring/kickoffClose";
 import {
   floorEliteScore,
@@ -11,6 +12,12 @@ import {
   repairCoachingMovementDimension,
 } from "@/lib/scoring/eliteBar";
 import { applyTranscriptAutoCaps } from "@/lib/scoring/transcriptCaps";
+import { resolveFiredCapIds } from "@/lib/scoring/detectCaps";
+import {
+  applyKickoffMeritScoring,
+  attachKickoffCapNotes,
+  enrichFiredCapEffects,
+} from "@/lib/scoring/meritCaps";
 import { hasLiveNextCallBooking } from "@/lib/scoring/detectCaps";
 import { gradeFromScore, normalizeToHundred } from "@/lib/scoring/calculate";
 import { refreshDimensionQuickFixes } from "@/lib/scoring/quickFix";
@@ -146,23 +153,56 @@ function applyEvidenceScoreCaps(result: EvaluationResult): EvaluationResult {
   return recalculateTotals({ ...result, dimensions });
 }
 
+export function applyKickoffMeritHydration(
+  result: EvaluationResult,
+  transcript: string | null | undefined,
+): EvaluationResult {
+  if (result.callType !== "kickoff" || !transcript?.trim()) return result;
+
+  const rubric = getRubric("kickoff");
+  const dimensions = result.dimensions.map((d) => ({ ...d }));
+  const before = dimensions.map((d) => d.score);
+
+  applyKickoffMeritScoring(dimensions, transcript);
+  const capIds = resolveFiredCapIds({
+    callType: "kickoff",
+    transcript,
+    modelFiredIds: result.firedCaps.map((c) => c.id),
+  });
+  attachKickoffCapNotes(dimensions, rubric, new Set(capIds));
+
+  const changed = dimensions.some((d, i) => d.score !== before[i]);
+  if (!changed && !dimensions.some((d) => d.capNote)) return result;
+
+  const next = recalculateTotals({
+    ...result,
+    dimensions,
+    firedCaps: enrichFiredCapEffects(result.firedCaps, dimensions),
+  });
+  return next;
+}
+
 /** Server-only: evidence metadata + quick-fix fallbacks. Do not import from client components. */
 export function hydrateCompletedReport(
   result: EvaluationResult,
   transcript?: string | null,
 ): EvaluationResult {
-  let next = applyTranscriptAutoCaps(result, transcript);
+  let next = applyKickoffMeritHydration(result, transcript);
+  next = applyTranscriptAutoCaps(next, transcript);
   next = applyKickoffCloseCalibration(next, transcript);
   next = applyCoachingTranscriptRepairs(next, transcript);
   next = applyEliteBarCalibration(next, transcript);
   next = applyEvidenceScoreCaps(next);
   // Re-apply kick-off floors after evidence caps (legacy rows may lack verified counts).
   next = applyKickoffCloseCalibration(next, transcript);
+  next = mergeKickoffDisclosureRedFlags(next, transcript);
   next = filterKickoffTranscriptRedFlags(next, transcript);
   next = hydrateEvaluationResult(next);
   // Re-apply kick-off caps after presentation (never raise scores).
   next = applyEliteBarCalibration(next, transcript);
+  next = applyKickoffMeritHydration(next, transcript);
   next = applyKickoffCloseCalibration(next, transcript);
+  next = mergeKickoffDisclosureRedFlags(next, transcript);
   next = filterKickoffTranscriptRedFlags(next, transcript);
   next = applyTranscriptAutoCaps(next, transcript);
   return {

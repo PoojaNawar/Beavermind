@@ -5,6 +5,7 @@ import type {
   EvaluationAudit,
   EvaluationResult,
   EvaluationStatus,
+  FiredCap,
 } from "@/lib/rubrics/types";
 import { hydrateEvaluationResult } from "@/lib/transcripts/evidenceQuality";
 import {
@@ -13,6 +14,10 @@ import {
   scoringNotes,
   scoreHeadline,
 } from "@/lib/ui/reportPresentation";
+import {
+  globalCapsAudit,
+  KICKOFF_AUTO_CAPS,
+} from "@/lib/scoring/meritCaps";
 import { coachingPillars } from "@/lib/scoring/scoreIfApplied";
 import { DimensionAccordion } from "./DimensionAccordion";
 import { ProcessingProgress } from "./ProcessingProgress";
@@ -43,6 +48,25 @@ function gradeTone(grade: string): string {
   if (grade === "Fail" || grade === "At risk") return "var(--danger)";
   if (grade === "Inconsistent") return "var(--warn)";
   return "var(--good)";
+}
+
+function formatGlobalCapLine(
+  condition: string,
+  fired: boolean,
+  firedCap: FiredCap | undefined,
+  fallbackEffect: string,
+): { mark: string; text: string } {
+  if (!fired) {
+    return { mark: "✓", text: `${condition} — not triggered` };
+  }
+  let detail = (firedCap?.effect ?? fallbackEffect).replace(/\.$/, "");
+  const dimMatch = detail.match(/^(d\d+) max (\d+)/i);
+  if (dimMatch) {
+    detail = `capped ${dimMatch[1]!.toUpperCase()} at ${dimMatch[2]}`;
+  } else {
+    detail = detail.charAt(0).toLowerCase() + detail.slice(1);
+  }
+  return { mark: "⚠", text: `${condition} — triggered, ${detail}` };
 }
 
 export function EvaluationReport({
@@ -138,6 +162,24 @@ export function EvaluationReport({
   const quality = report.evidenceQuality;
   const pillars = coachingPillars(report);
   const overview = dimensionOverview(report);
+  const capsAudit = globalCapsAudit(
+    report.callType === "kickoff" ? KICKOFF_AUTO_CAPS : [],
+    report.firedCaps.map((c) => c.id),
+  );
+  const rejectedDimensions = report.dimensions.filter(
+    (d) => d.rejectedEvidenceCount > 0,
+  );
+  const firedCapById = new Map(report.firedCaps.map((c) => [c.id, c]));
+  const capsTriggered = capsAudit.filter((c) => c.fired).length;
+  const aboutSummaryParts = [
+    `${quality.verified}/${quality.found} verified`,
+    capsAudit.length > 0
+      ? capsTriggered > 0
+        ? `${capsTriggered} cap(s) triggered`
+        : "no caps triggered"
+      : null,
+    notes.length > 0 ? `${notes.length} scoring note(s)` : null,
+  ].filter(Boolean);
 
   async function downloadPdf() {
     setPdfError(null);
@@ -268,6 +310,42 @@ export function EvaluationReport({
         </p>
       </section>
 
+      <section className="bm-fade-up border-b border-[var(--line)] pb-8">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+          Red flags
+        </h2>
+        {report.redFlags.length > 0 ? (
+          <ul className="mt-4 space-y-4">
+            {report.redFlags.map((flag, i) => (
+              <li key={i} className="border-l-2 border-[var(--danger)] pl-4">
+                <h3 className="font-semibold text-[var(--danger)]">
+                  {flag.title}
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-[var(--ink)]">
+                  {flag.explanation}
+                </p>
+                {flag.evidence ? (
+                  <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+                    Evidence: “{flag.evidence}”
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--card)] px-4 py-4">
+            <p className="text-[15px] font-medium text-[var(--ink)]">
+              None identified
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
+              No material retention risks were flagged in this transcript. A
+              strong score can still miss hidden risks — this section is where
+              those would appear.
+            </p>
+          </div>
+        )}
+      </section>
+
       <section className="bm-fade-up bm-fade-up-delay-1 border-b border-[var(--line)] pb-8">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
           One Thing
@@ -333,70 +411,6 @@ export function EvaluationReport({
         </ReportSection>
       ) : null}
 
-      <section className="grid gap-8 border-b border-[var(--line)] pb-8 sm:grid-cols-2">
-        <div>
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-            Evidence quality
-          </h2>
-          <p className="mt-2 text-[22px] font-semibold tabular-nums tracking-tight">
-            {quality.verified} / {quality.found} verified
-          </p>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            {quality.rejected} rejected
-            {` · ${quality.notDemonstratedDimensions} not demonstrated`}
-          </p>
-          <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
-            Verified evidence is grounded in the original transcript. Rejected
-            or unverified evidence does not support scoring.
-          </p>
-        </div>
-        <div>
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-            Red flags
-          </h2>
-          {report.redFlags.length > 0 ? (
-            <ul className="mt-3 space-y-4">
-              {report.redFlags.map((flag, i) => (
-                <li key={i} className="border-l-2 border-[var(--danger)] pl-4">
-                  <h3 className="font-semibold text-[var(--danger)]">
-                    {flag.title}
-                  </h3>
-                  <p className="mt-1 text-sm leading-relaxed text-[var(--ink)]">
-                    {flag.explanation}
-                  </p>
-                  {flag.evidence ? (
-                    <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-                      Evidence: “{flag.evidence}”
-                    </p>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-2 text-[15px] font-medium text-[var(--muted)]">
-              None identified
-            </p>
-          )}
-        </div>
-      </section>
-
-      {notes.length > 0 ? (
-        <ReportSection
-          title="Scoring notes"
-          summary={notes[0]}
-          defaultOpen={false}
-        >
-          <ul className="space-y-2 text-sm leading-relaxed">
-            {notes.map((note) => (
-              <li key={note} className="flex gap-2">
-                <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-[var(--ink)]" />
-                <span>{note}</span>
-              </li>
-            ))}
-          </ul>
-        </ReportSection>
-      ) : null}
-
       <section className="border-t border-[var(--line)] pt-6">
         <div className="mb-3">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
@@ -414,6 +428,100 @@ export function EvaluationReport({
           focusKey={focusKey}
         />
       </section>
+
+      <ReportSection
+        title="About this evaluation"
+        summary={aboutSummaryParts.join(" · ")}
+        defaultOpen={false}
+      >
+        <div className="space-y-8">
+          <div>
+            <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+              Evidence quality
+            </h3>
+            <p className="mt-2 text-[22px] font-semibold tabular-nums tracking-tight">
+              {quality.verified} / {quality.found} verified
+            </p>
+            {rejectedDimensions.length > 0 ? (
+              <div className="mt-1 space-y-1 text-sm text-[var(--muted)]">
+                {rejectedDimensions.map((dim) => (
+                  <button
+                    key={dim.id}
+                    type="button"
+                    onClick={() => {
+                      setFocusDimId(dim.id);
+                      setFocusKey((k) => k + 1);
+                    }}
+                    className="block text-left underline-offset-2 hover:text-[var(--ink)] hover:underline"
+                  >
+                    {dim.rejectedEvidenceCount} rejected · jump to {dim.name}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                {quality.rejected} rejected
+              </p>
+            )}
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              {quality.notDemonstratedDimensions} not demonstrated
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
+              Verified evidence is grounded in the original transcript. Rejected
+              or unverified quotes do not support scoring — they are checks on
+              the AI, not marks against you.
+            </p>
+          </div>
+
+          {capsAudit.length > 0 ? (
+            <div>
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                Global caps checked
+              </h3>
+              <ul className="mt-3 space-y-2">
+                {capsAudit.map((cap) => {
+                  const line = formatGlobalCapLine(
+                    cap.condition,
+                    cap.fired,
+                    firedCapById.get(cap.id),
+                    cap.effect,
+                  );
+                  return (
+                    <li
+                      key={cap.id}
+                      className="flex gap-2 text-sm leading-relaxed text-[var(--ink)]"
+                    >
+                      <span
+                        className="shrink-0 font-medium"
+                        aria-hidden
+                      >
+                        {line.mark}
+                      </span>
+                      <span>{line.text}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+
+          {notes.length > 0 ? (
+            <div>
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                Scoring notes
+              </h3>
+              <ul className="mt-3 space-y-2 text-sm leading-relaxed">
+                {notes.map((note) => (
+                  <li key={note} className="flex gap-2">
+                    <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-[var(--ink)]" />
+                    <span>{note}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      </ReportSection>
 
       <footer className="border-t border-[var(--line)] pt-4 text-xs text-[var(--muted)]">
         <p className="font-mono">{id}</p>

@@ -268,6 +268,9 @@ export function resolveLeverageTheme(result: EvaluationResult): LeverageTheme {
     const missed = result.dimensions.filter(isMissed);
     if (missed.length === 0) return "none";
     const d10 = dimById(result, "d10");
+    if (d10 && isMissed(d10) && d10.score !== null && d10.score < 4) {
+      return "live-booking";
+    }
     if (d10 && isMissed(d10) && d10.score === 0) return "live-booking";
     if (result.firedCaps.some((c) => c.id === "no-north-star")) {
       return "north-star";
