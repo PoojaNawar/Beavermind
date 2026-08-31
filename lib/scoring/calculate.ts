@@ -28,6 +28,7 @@ import {
 import { hasLiveNextCallBooking } from "@/lib/scoring/detectCaps";
 import { capScoreWithoutVerifiedEvidence } from "@/lib/transcripts/evidencePolicy";
 import { computeScoreIfApplied } from "@/lib/scoring/scoreIfApplied";
+import { applyAutoCapsToDimensions } from "@/lib/scoring/transcriptCaps";
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
@@ -135,37 +136,12 @@ export function applyCapsAndBuildResult(args: {
 
   // Apply dimension-level caps / forced scores from model-reported + rule IDs
   const firedIds = new Set(model.firedCapIds);
-  for (const cap of rubric.autoCaps) {
-    if (!firedIds.has(cap.id)) continue;
-
-    if (cap.dimensionId && cap.forceDimensionScore !== undefined) {
-      const dim = working.find((d) => d.id === cap.dimensionId);
-      if (dim && !dim.disabled && !dim.notApplicable) {
-        dim.score = cap.forceDimensionScore;
-        firedCaps.push({
-          id: cap.id,
-          condition: cap.condition,
-          effect: `${cap.dimensionId} forced to ${cap.forceDimensionScore}`,
-        });
-      }
-    } else if (cap.dimensionId && cap.maxDimensionScore !== undefined) {
-      const dim = working.find((d) => d.id === cap.dimensionId);
-      if (dim && dim.score !== null && dim.score > cap.maxDimensionScore) {
-        dim.score = cap.maxDimensionScore;
-        firedCaps.push({
-          id: cap.id,
-          condition: cap.condition,
-          effect: `${cap.dimensionId} capped at ${cap.maxDimensionScore}`,
-        });
-      }
-    } else if (cap.maxTotal !== undefined) {
-      firedCaps.push({
-        id: cap.id,
-        condition: cap.condition,
-        effect: `Total capped at ${cap.maxTotal}`,
-      });
-    }
-  }
+  applyAutoCapsToDimensions(
+    working as DimensionResult[],
+    rubric,
+    firedIds,
+    firedCaps,
+  );
 
   // Kickoff D11: cap/restore from the transcript, not from rationale wording.
   // D7/D12 floors are applied after the result object is built.

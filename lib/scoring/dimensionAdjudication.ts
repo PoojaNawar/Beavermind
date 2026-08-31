@@ -126,6 +126,7 @@ function rubricQuickFix(dimId: string, callType: CallType): string | null {
 export function computeWhyNotFullMarks(
   dim: DimensionResult,
   callType: CallType,
+  result?: EvaluationResult,
 ): string | null {
   if (!isScored(dim) || dim.score === null || isFullMarks(dim)) return null;
 
@@ -143,6 +144,9 @@ export function computeWhyNotFullMarks(
       case "d3":
         return "The rubric requires stated time, at least three sequenced phases, and explicit client consent before diving in; one of those elements was incomplete.";
       case "d4":
+        if (result?.firedCaps.some((c) => c.id === "no-north-star")) {
+          return "The rubric requires the emotional why to be stated back, confirmed, named as a North Star, and locked to a concrete 30-day marker; no North Star was constructed in the transcript.";
+        }
         return "The rubric requires the emotional why to be identified, stated back, confirmed, named as a North Star, and locked to a concrete 30-day marker; one of those elements was missing or not confirmed.";
       case "d5":
         return "The rubric requires each phase to have a clear job, outcome, and tie to this client's goal — not just phase names; one phase outcome or goal tie was not fully demonstrated.";
@@ -155,6 +159,9 @@ export function computeWhyNotFullMarks(
       case "d9":
         return "The rubric requires what, how, where to submit, by when, and verified client understanding; how-to or confirmed understanding was not fully demonstrated across the complete call sequence.";
       case "d10":
+        if (dim.score === 0) {
+          return "The rubric requires a live verbal date and time confirmation before hang-up; scheduling was deferred to an assistant or link instead of booking live on the call.";
+        }
         return "The rubric requires a live verbal date and time confirmation before hang-up; booking was attempted or referenced but not fully secured live.";
       case "d11":
         return "The rubric requires a structured recap plus confidence anchor and emotional reinforcement; one close element was missing.";
@@ -181,8 +188,12 @@ export function computeWhyNotFullMarks(
   return `The rubric's elite criteria for ${dim.name.toLowerCase()} were not fully satisfied in verified transcript evidence.`;
 }
 
-export function heldBackPhrase(dim: DimensionResult, callType: CallType): string {
-  const why = dim.whyNotFullMarks ?? computeWhyNotFullMarks(dim, callType);
+export function heldBackPhrase(
+  dim: DimensionResult,
+  callType: CallType,
+  result?: EvaluationResult,
+): string {
+  const why = dim.whyNotFullMarks ?? computeWhyNotFullMarks(dim, callType, result);
   const level = performanceLevel(dim);
   const area = dim.name.replace(/\s*&\s*/g, " and ").toLowerCase();
 
@@ -273,7 +284,7 @@ export function finalizeDimensionAdjudication(
   }
 
   const whyNotFullMarks = hideInternalIds(
-    computeWhyNotFullMarks(next, callType) ?? "",
+    computeWhyNotFullMarks(next, callType, result) ?? "",
   ).trim();
 
   let quickFix = next.quickFix?.trim() ?? "";

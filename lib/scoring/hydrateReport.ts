@@ -10,6 +10,7 @@ import {
   repairCoachingBookingDimension,
   repairCoachingMovementDimension,
 } from "@/lib/scoring/eliteBar";
+import { applyTranscriptAutoCaps } from "@/lib/scoring/transcriptCaps";
 import { hasLiveNextCallBooking } from "@/lib/scoring/detectCaps";
 import { gradeFromScore, normalizeToHundred } from "@/lib/scoring/calculate";
 import { refreshDimensionQuickFixes } from "@/lib/scoring/quickFix";
@@ -150,7 +151,8 @@ export function hydrateCompletedReport(
   result: EvaluationResult,
   transcript?: string | null,
 ): EvaluationResult {
-  let next = applyKickoffCloseCalibration(result, transcript);
+  let next = applyTranscriptAutoCaps(result, transcript);
+  next = applyKickoffCloseCalibration(next, transcript);
   next = applyCoachingTranscriptRepairs(next, transcript);
   next = applyEliteBarCalibration(next, transcript);
   next = applyEvidenceScoreCaps(next);
@@ -162,6 +164,7 @@ export function hydrateCompletedReport(
   next = applyEliteBarCalibration(next, transcript);
   next = applyKickoffCloseCalibration(next, transcript);
   next = filterKickoffTranscriptRedFlags(next, transcript);
+  next = applyTranscriptAutoCaps(next, transcript);
   return {
     ...next,
     dimensions: refreshDimensionQuickFixes(

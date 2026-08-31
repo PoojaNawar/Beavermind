@@ -257,14 +257,14 @@ export function kickoffHasProgramClientConfirmation(transcript: string): boolean
  */
 export function kickoffHasPrepElite(transcript: string): boolean {
   const prepFrame =
-    /intake(?:notes|call|form)|got (?:it|your (?:notes|file|intake)) in front|do not need to repeat|already went through|I(?:'ve| have) got (?:it|the whole picture)|reviewed (?:your |the )?(?:intake|notes|CRM)/i.test(
+    /intake(?:notes|call|form)|got (?:it|your (?:notes|file|intake)) in front|(?:I(?:'ve| have) got (?:your )?intake|got your intake|your intake here)|do not need to repeat|already went through|I(?:'ve| have) got (?:it|the whole picture)|reviewed (?:your |the )?(?:intake|notes|CRM)/i.test(
       transcript,
     );
   const details = [
     /\b(?:forty|thirty|fifty)[- ]?\w+\b|\b\d{2}\b.{0,40}(?:years? old|architect|engineer|teacher|portland)/i,
-    /architect|engineer|teacher|portland|occupation|job site/i,
-    /(?:low )?back|shoulder|knee|hip|injury|impingement|rotator/i,
-    /tried (?:PT|physical therapy)|PT a couple|goals?|pain history|medical history/i,
+    /architect|engineer|teacher|nurse|icu|portland|tampa|occupation|job site/i,
+    /(?:low )?back|shoulder|knee|hip|foot|feet|plantar|fascia|injury|impingement|rotator/i,
+    /tried (?:PT|physical therapy)|PT a couple|(?:eight|8) weeks of PT|goals?|pain history|medical history|\d+\s+months?/i,
   ].filter((re) => re.test(transcript)).length;
   return prepFrame && details >= 2;
 }
@@ -609,6 +609,13 @@ export function nextEliteScore(
     }
     if (dimensionId === "d9" && score >= 10 && !kickoffHasNextStepsElite(transcript)) {
       return 7;
+    }
+    if (
+      dimensionId === "d10" &&
+      score > 0 &&
+      !hasLiveNextCallBooking(transcript)
+    ) {
+      return 0;
     }
   }
 

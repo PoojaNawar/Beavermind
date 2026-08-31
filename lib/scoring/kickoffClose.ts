@@ -130,37 +130,39 @@ function parseSpeakerLine(line: string): CoachQuote & { body: string } {
 }
 
 function pickPostCallQuotes(transcript: string): CoachQuote[] {
-  const patterns: RegExp[] = [
+  const linePatterns: RegExp[] = [
     /I(?:'m| am) assigning your diagnostics[^.!?]*[.!?]/i,
     /You'll also get a (?:short )?recap message[^.!?]*[.!?]/i,
     /(?:And like we said, )?program(?:'s| is) (?:loaded|ready)[^.!?]*by[^.!?]*[.!?]/i,
-  ];
-  const fallbackPatterns: RegExp[] = [
-    /I(?:'m| am) assigning your diagnostics[^.!?]*[.!?]/i,
-    /(?:You'll also get a )?(?:short )?recap message[^.!?]*(?:within|fifteen|15)[^.!?]*[.!?]/i,
-    /(?:And like we said, )?program(?:'s| is) (?:loaded|ready)[^.!?]*by[^.!?]*[.!?]/i,
+    /I(?:'ll| will) build(?: out)? your (?:actual )?program[^.!?]*[.!?]/i,
+    /gives me the weekend to look at everything and build out your actual program[^.!?]*[.!?]/i,
+    /(?:you(?:'d| will) have it ready to start|ready to start) (?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)[^.!?]*[.!?]/i,
   ];
   const quotes: CoachQuote[] = [];
   for (const line of transcript.split(/\n+/)) {
     const { speaker, body } = parseSpeakerLine(line);
     if (body.length < 20) continue;
-    for (let i = 0; i < patterns.length; i++) {
-      if (quotes[i]) continue;
-      const match = body.match(patterns[i]!) ?? body.match(fallbackPatterns[i]!);
+    for (const pattern of linePatterns) {
+      if (quotes.length >= 3) break;
+      const match = body.match(pattern);
       if (!match) continue;
       let excerpt = match[0].trim();
       if (!/[.!?]$/.test(excerpt)) excerpt = `${excerpt}.`;
+      if (excerpt.length < 24) continue;
       if (
-        excerpt.length < 24 ||
-        quotes.some((q) => q.quote.includes(excerpt.slice(0, 28)))
+        quotes.some(
+          (q) =>
+            q.quote.includes(excerpt.slice(0, 28)) ||
+            excerpt.includes(q.quote.slice(0, 28)),
+        )
       ) {
         continue;
       }
-      quotes[i] = { quote: excerpt, speaker };
+      quotes.push({ quote: excerpt, speaker });
     }
-    if (quotes.filter(Boolean).length >= 3) break;
+    if (quotes.length >= 3) break;
   }
-  return quotes.filter((q): q is CoachQuote => Boolean(q?.quote));
+  return quotes.slice(0, 3);
 }
 
 function postCallRationale(quoteCount: number): string {
